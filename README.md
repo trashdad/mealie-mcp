@@ -29,7 +29,7 @@ Targets the Mealie **v2/v3 API** (`/api/households/...`). If you are still on Me
 
 - Mealie reachable from wherever this runs (LAN is fine)
 - A Mealie **API token**: Mealie → your user → *API Tokens* → create (long-lived)
-- A **public HTTPS hostname** pointing at this server. Claude's servers must be able to reach it. Easiest: Cloudflare Tunnel (included in the compose file). Alternatives: Tailscale Funnel, or a reverse proxy (Caddy/NPM/Traefik) with port-forwarding.
+- A **public HTTPS hostname** pointing at this server. Claude's servers must be able to reach it. If you already run a reverse proxy (Nginx Proxy Manager, Caddy, Traefik) with ports 80/443 forwarded, just add a host — see Option B. Otherwise the compose file includes a Cloudflare Tunnel (Option A).
 
 ## Run it (Docker, on Proxmox)
 
@@ -51,13 +51,30 @@ nano .env        # MEALIE_URL, MEALIE_API_TOKEN, PUBLIC_URL, MCP_LOGIN_PASSWORD
 docker compose --profile cloudflared up -d --build
 ```
 
-### Option B — your own reverse proxy
+### Option B — Nginx Proxy Manager (or any reverse proxy)
 
 ```bash
 docker compose up -d --build
 ```
 
-Then proxy `https://mealie-mcp.yourdomain.com` → `http://<docker-host>:8000` with TLS. Caddy example:
+1. DNS: add an `A`/`CNAME` record for `mealie-mcp.yourdomain.com` pointing at your public IP (same as your other NPM hosts).
+2. NPM → *Hosts → Proxy Hosts → Add Proxy Host*:
+   - **Domain Names:** `mealie-mcp.yourdomain.com`
+   - **Scheme:** `http` · **Forward Hostname/IP:** the Docker host's LAN IP (or the container name `mealie-mcp` if NPM is on the same Docker network) · **Forward Port:** `8000`
+   - **Block Common Exploits:** on · **Websockets Support:** on (harmless, not required)
+   - **SSL tab:** request a Let's Encrypt certificate, **Force SSL** on, **HTTP/2** on
+   - **Advanced tab**, paste:
+     ```nginx
+     proxy_buffering off;
+     proxy_read_timeout 300s;
+     proxy_send_timeout 300s;
+     ```
+     (stops nginx buffering streamed responses and keeps long tool calls — e.g. importing a slow recipe site — from being cut off)
+3. Do **not** put an NPM Access List (IP allow-list) on this host — the login page has to be reachable from your phone/browser, not just from Anthropic.
+
+`PUBLIC_URL` in `.env` must be `https://mealie-mcp.yourdomain.com` — it's what the OAuth metadata advertises, and Claude rejects the connector if it doesn't match the URL you enter.
+
+Caddy equivalent, if you ever switch:
 
 ```
 mealie-mcp.yourdomain.com {
