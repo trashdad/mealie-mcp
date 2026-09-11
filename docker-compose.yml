@@ -1,0 +1,28 @@
+services:
+  mealie-mcp:
+    build: .
+    image: mealie-mcp:latest
+    container_name: mealie-mcp
+    restart: unless-stopped
+    env_file: .env
+    volumes:
+      - ./data:/data
+    ports:
+      # Only needed if you expose it via your own reverse proxy (Caddy/NPM/Traefik).
+      # Remove this block if you use the cloudflared service below.
+      - "8000:8000"
+
+  # Optional: Cloudflare Tunnel - gives you a public HTTPS hostname with no port forwarding.
+  # 1. Cloudflare Zero Trust -> Networks -> Tunnels -> create tunnel, copy the token into .env
+  # 2. Add a Public Hostname: mealie-mcp.yourdomain -> http://mealie-mcp:8000
+  # 3. docker compose --profile cloudflared up -d
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: mealie-mcp-tunnel
+    restart: unless-stopped
+    profiles: ["cloudflared"]
+    command: tunnel --no-autoupdate run
+    environment:
+      - TUNNEL_TOKEN=${TUNNEL_TOKEN}
+    depends_on:
+      - mealie-mcp

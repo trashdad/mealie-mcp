@@ -1,0 +1,118 @@
+# mealie-mcp
+
+A remote MCP server for [Mealie](https://mealie.io) that you can add to Claude as a **custom connector** — including the Claude mobile app — without any third-party auth service.
+
+- **Streamable HTTP** transport at `/mcp` (what Claude's connectors require)
+- **Built-in OAuth 2.1 authorization server** (dynamic client registration, PKCE, refresh-token rotation) with a single-password login page — nothing else to run
+- Tokens/clients persist to a JSON file, so restarts don't force re-authorisation
+- Only allows the Claude callback URLs as OAuth redirects, so nobody can register a phishing client against your login page
+- Failed-login lockout (5 attempts → 5 minute cool-off per IP)
+
+## Tools
+
+| Tool | What it does |
+|---|---|
+| `search_recipes` | Free-text search, filter by tag/category slug, paginated summaries |
+| `get_recipe` | Full recipe: ingredients, steps, notes, nutrition |
+| `import_recipe_from_url` | Scrape a recipe web page into Mealie |
+| `create_recipe` / `update_recipe` / `delete_recipe` | Recipe CRUD (free-text ingredient lines and steps) |
+| `list_tags_and_categories` | Slugs usable as search filters |
+| `list_shopping_lists` / `get_shopping_list` | Lists and their (unchecked) items |
+| `add_shopping_items` / `update_shopping_item` / `delete_shopping_items` | Add free-text items, tick/rename/re-quantity, remove |
+| `add_recipe_to_shopping_list` | Push a recipe's ingredients onto a list (scalable) |
+| `get_meal_plan` / `add_meal_plan_entry` / `delete_meal_plan_entry` | Meal planning by date |
+| `mealie_get` | Read-only escape hatch for any `/api/...` GET |
+
+Targets the Mealie **v2/v3 API** (`/api/households/...`). If you are still on Mealie 1.x the client transparently falls back to the old `/api/groups/...` paths on a 404.
+
+## Requirements
+
+- Mealie reachable from wherever this runs (LAN is fine)
+- A Mealie **API token**: Mealie → your user → *API Tokens* → create (long-lived)
+- A **public HTTPS hostname** pointing at this server. Claude's servers must be able to reach it. Easiest: Cloudflare Tunnel (included in the compose file). Alternatives: Tailscale Funnel, or a reverse proxy (Caddy/NPM/Traefik) with port-forwarding.
+
+## Run it (Docker, on Proxmox)
+
+On a VM or LXC with Docker:
+
+```bash
+git clone <this repo> mealie-mcp && cd mealie-mcp
+cp .env.example .env
+nano .env        # MEALIE_URL, MEALIE_API_TOKEN, PUBLIC_URL, MCP_LOGIN_PASSWORD
+```
+
+### Option A — Cloudflare Tunnel (no port forwarding)
+
+1. Cloudflare Zero Trust → *Networks → Tunnels → Create a tunnel* (Cloudflared). Copy the token into `.env` as `TUNNEL_TOKEN=...`.
+2. In the tunnel's *Public Hostname* tab add: `mealie-mcp.yourdomain.com` → Service `HTTP` → `mealie-mcp:8000`.
+3. Set `PUBLIC_URL=https://mealie-mcp.yourdomain.com` in `.env`, remove the `ports:` block from `docker-compose.yml` (not needed), then:
+
+```bash
+docker compose --profile cloudflared up -d --build
+```
+
+### Option B — your own reverse proxy
+
+```bash
+docker compose up -d --build
+```
+
+Then proxy `https://mealie-mcp.yourdomain.com` → `http://<docker-host>:8000` with TLS. Caddy example:
+
+```
+mealie-mcp.yourdomain.com {
+    reverse_proxy 192.168.1.20:8000
+}
+```
+
+### Check it
+
+- `https://mealie-mcp.yourdomain.com/` → a one-line banner
+- `https://mealie-mcp.yourdomain.com/healthz` → `{"ok": true, "mealie": "reachable"}`
+- `https://mealie-mcp.yourdomain.com/.well-known/oauth-authorization-server` → JSON metadata
+
+## Connect Claude
+
+**Claude mobile / web / desktop:** Settings → *Connectors* → *Add custom connector* → URL: `https://mealie-mcp.yourdomain.com/mcp` → leave the OAuth client ID/secret fields empty → *Add*. Claude will open your login page; enter `MCP_LOGIN_PASSWORD`. Done — enable the connector in a chat and ask it what's for dinner.
+
+Custom connectors are added per account, so once it's added on the web it appears on mobile too.
+
+**Claude Code:**
+
+```bash
+claude mcp add --transport http mealie https://mealie-mcp.yourdomain.com/mcp
+```
+
+then `/mcp` inside Claude Code to trigger the login.
+
+## Configuration
+
+| Variable | Default | Meaning |
+|---|---|---|
+| `MEALIE_URL` | — | Mealie base URL, as seen from this container |
+| `MEALIE_API_TOKEN` | — | Mealie API token (the server acts as that user) |
+| `PUBLIC_URL` | — | Public HTTPS origin of this server, no trailing slash, no `/mcp` |
+| `MCP_LOGIN_PASSWORD` | — | Password for the connect-time login page (min 12 chars) |
+| `MCP_HOST` / `MCP_PORT` | `0.0.0.0` / `8000` | Bind address |
+| `MCP_DATA_DIR` | `/data` | Where `auth_state.json` lives |
+| `MCP_ACCESS_TOKEN_TTL` | `3600` | Access token lifetime (s). Claude refreshes automatically. |
+| `MCP_REFRESH_TOKEN_TTL` | `2592000` | Refresh token lifetime (s) — how long before you must log in again |
+| `MCP_ALLOWED_REDIRECT_URIS` | claude.ai callback + loopback | Comma-separated allowlist for OAuth clients |
+
+## Security notes
+
+- Everything Claude can do, it does **as the Mealie user who owns the API token**. Create a dedicated Mealie user if you want to limit blast radius.
+- The MCP endpoint is only reachable with a valid bearer token; the login page is the only unauthenticated surface (plus OAuth metadata/registration, which are public by design).
+- For belt-and-braces you can restrict the hostname at your proxy/tunnel to Anthropic's egress range `160.79.104.0/21` — but note *you* also need to reach `/login` from your phone/browser during connect, so allow that too (or only enforce the IP rule on `/mcp`, `/token`, `/register`).
+- Revoke access at any time: delete `data/auth_state.json` and restart (or just rotate `MCP_LOGIN_PASSWORD` — existing tokens keep working until they expire, so delete the file too).
+
+## Local development
+
+```bash
+python -m venv .venv && .venv/Scripts/activate      # or source .venv/bin/activate
+pip install -e .
+MEALIE_URL=http://mealie.lan:9925 MEALIE_API_TOKEN=... PUBLIC_URL=http://127.0.0.1:8000 \
+MCP_LOGIN_PASSWORD=correct-horse-battery MCP_DATA_DIR=./data python -m mealie_mcp
+```
+
+Built on the official [`mcp`](https://github.com/modelcontextprotocol/python-sdk) Python SDK (2.x) — the SDK provides the `/authorize`, `/token`, `/register`, `/revoke` and `.well-known` endpoints; this project supplies the provider, login page, Mealie client and tools.

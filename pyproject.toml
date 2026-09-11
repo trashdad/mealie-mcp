@@ -1,0 +1,22 @@
+[project]
+name = "mealie-mcp"
+version = "0.1.0"
+description = "Remote MCP server for Mealie, with built-in OAuth so it can be added as a Claude custom connector (web / desktop / mobile)."
+requires-python = ">=3.12"
+dependencies = [
+    "mcp==2.2.0",
+    "httpx>=0.27",
+    "uvicorn[standard]>=0.30",
+    "pydantic-settings>=2.4",
+    "python-multipart>=0.0.9",
+]
+
+[project.scripts]
+mealie-mcp = "mealie_mcp.server:main"
+
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools.packages.find]
+include = ["mealie_mcp*"]
