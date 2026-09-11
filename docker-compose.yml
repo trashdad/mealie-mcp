@@ -1,7 +1,8 @@
 services:
   mealie-mcp:
-    build: .
-    image: mealie-mcp:latest
+    image: ghcr.io/retr083/mealie-mcp:latest
+    # To build from source instead of pulling the published image:
+    # build: .
     container_name: mealie-mcp
     restart: unless-stopped
     env_file: .env

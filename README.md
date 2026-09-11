@@ -23,7 +23,7 @@ A remote MCP server for [Mealie](https://mealie.io) that you can add to Claude a
 | `get_meal_plan` / `add_meal_plan_entry` / `delete_meal_plan_entry` | Meal planning by date |
 | `mealie_get` | Read-only escape hatch for any `/api/...` GET |
 
-Targets the Mealie **v2/v3 API** (`/api/households/...`). If you are still on Mealie 1.x the client transparently falls back to the old `/api/groups/...` paths on a 404.
+Targets the Mealie **v2/v3 API** (`/api/households/...`); tested against Mealie **v3.22**. If you are still on Mealie 1.x the client transparently falls back to the old `/api/groups/...` paths on a 404.
 
 ## Requirements
 
@@ -36,10 +36,12 @@ Targets the Mealie **v2/v3 API** (`/api/households/...`). If you are still on Me
 On a VM or LXC with Docker:
 
 ```bash
-git clone <this repo> mealie-mcp && cd mealie-mcp
+git clone https://github.com/retr083/mealie-mcp.git && cd mealie-mcp
 cp .env.example .env
 nano .env        # MEALIE_URL, MEALIE_API_TOKEN, PUBLIC_URL, MCP_LOGIN_PASSWORD
 ```
+
+The compose file pulls the pre-built multi-arch image `ghcr.io/retr083/mealie-mcp:latest` (amd64 + arm64). To build from source instead, uncomment `build: .` in `docker-compose.yml` and add `--build` to the commands below.
 
 ### Option A — Cloudflare Tunnel (no port forwarding)
 
@@ -48,13 +50,13 @@ nano .env        # MEALIE_URL, MEALIE_API_TOKEN, PUBLIC_URL, MCP_LOGIN_PASSWORD
 3. Set `PUBLIC_URL=https://mealie-mcp.yourdomain.com` in `.env`, remove the `ports:` block from `docker-compose.yml` (not needed), then:
 
 ```bash
-docker compose --profile cloudflared up -d --build
+docker compose --profile cloudflared up -d
 ```
 
 ### Option B — Nginx Proxy Manager (or any reverse proxy)
 
 ```bash
-docker compose up -d --build
+docker compose up -d
 ```
 
 1. DNS: add an `A`/`CNAME` record for `mealie-mcp.yourdomain.com` pointing at your public IP (same as your other NPM hosts).
@@ -101,6 +103,26 @@ claude mcp add --transport http mealie https://mealie-mcp.yourdomain.com/mcp
 ```
 
 then `/mcp` inside Claude Code to trigger the login.
+
+## Troubleshooting
+
+| Symptom | Cause / fix |
+|---|---|
+| Browser shows `ERR_SSL_UNRECOGNIZED_NAME_ALERT`, or `http://` gives NPM's "Congratulations" page | NPM has no proxy host matching that exact hostname (typo, not saved, or disabled). Fix the proxy host and request the certificate. |
+| Claude: "Failed to start MCP authorization" and **nothing** in `docker logs` | Claude never reached you. Hostname must resolve (from the public internet) to a public **IPv4** address — no private/CGNAT ranges, no AAAA-only. Check with `nslookup <host> 8.8.8.8` from mobile data. |
+| Claude: "Your account was authorized, but no MCP server was found at the provided URL" | Login worked but the connector URL is wrong — it must end in **`/mcp`**. Delete and re-add the connector with `https://<host>/mcp`. |
+| Claude: "Authorization with the MCP server failed" | `PUBLIC_URL` doesn't match the URL you entered (scheme/host must be identical, no trailing slash), or `/token` took >10 s. Check `docker logs mealie-mcp`. |
+| `/healthz` returns `503` | The container can't reach `MEALIE_URL`, or `MEALIE_API_TOKEN` is wrong. |
+| Tool calls time out on slow recipe imports | Add the `proxy_read_timeout` lines from Option B to your proxy config. |
+
+Every failure toast in Claude includes an `ofid_…` reference; if you file an issue with [anthropics/claude-ai-mcp](https://github.com/anthropics/claude-ai-mcp/issues), include it along with your `docker logs` lines from the attempt.
+
+## Limitations (read before exposing it)
+
+- **Single user, single password.** Anyone who knows the password gets full access to the Mealie account behind the API token. This is designed for a personal homelab, not multi-tenant use.
+- **Tokens are stored unhashed** in `data/auth_state.json` (they're random 48-byte secrets, but treat that file like a password file — it lives in a Docker volume for that reason).
+- **No account/session UI.** To revoke everything, delete `data/auth_state.json` and restart.
+- Pinned to `mcp==2.2.0` — the official SDK's server API is still changing between releases (e.g. `FastMCP` → `MCPServer`), so upgrades need a look, not just a bump.
 
 ## Configuration
 
