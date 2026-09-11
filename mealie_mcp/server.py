@@ -9,7 +9,6 @@ from datetime import date, timedelta
 from typing import Any, Literal
 
 import uvicorn
-from pydantic import AnyHttpUrl
 from starlette.requests import Request
 from starlette.responses import JSONResponse, PlainTextResponse, Response
 
@@ -54,8 +53,12 @@ mcp = MCPServer(
     ),
     auth_server_provider=oauth,
     auth=AuthSettings(
-        issuer_url=AnyHttpUrl(settings.public_base),
-        resource_server_url=AnyHttpUrl(settings.mcp_endpoint),
+        # Plain strings on purpose: AuthSettings preserves the empty path so the
+        # advertised issuer is the canonical "https://host" (no trailing slash).
+        issuer_url=settings.public_base,  # type: ignore[arg-type]
+        resource_server_url=settings.mcp_endpoint,  # type: ignore[arg-type]
+        # Tokens are only ever minted by this same process for this same resource.
+        validate_token_resource=False,
         client_registration_options=ClientRegistrationOptions(
             enabled=True,
             valid_scopes=[settings.mcp_scope],
