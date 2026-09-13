@@ -82,8 +82,11 @@ async def test_usda_parsing_ranking_and_energy_fallbacks(make_sources):
     assert results[2]["per_100g"] == {"calories": 130, "protein_g": 2.69, "sodium_mg": 1, "cholesterol_mg": 0}
     request = up.requests[0]
     assert request.url.params["api_key"] == "DEMO_KEY"
-    # regression: USDA rejects a request for all four data types with HTTP 400
-    assert request.url.params.get_list("dataType") == ["Foundation", "SR Legacy", "Survey (FNDDS)"]
+    # regression: search terms go in a JSON body -- USDA's gateway 400s some dataType
+    # combinations when they're in the query string
+    assert request.method == "POST" and set(request.url.params) == {"api_key"}
+    body = json.loads(request.content)
+    assert body == {"query": "rice", "pageSize": 25, "dataType": ["Foundation", "SR Legacy", "Survey (FNDDS)", "Branded"]}
 
 
 async def test_off_parsing_units_and_brands(make_sources):

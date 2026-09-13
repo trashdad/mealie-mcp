@@ -51,9 +51,7 @@ _USDA_KCAL_IDS = (1008, 2048, 2047)
 _USDA_KJ_ID = 1062
 # Whole/generic foods first; branded products (marketing names, per-label data) last.
 _USDA_TYPE_RANK = {"Foundation": 0, "SR Legacy": 1, "Survey (FNDDS)": 2, "Branded": 3}
-# Types requested. USDA's gateway answers HTTP 400 when all four are requested at
-# once (verified 2026-09); branded products are Open Food Facts' strength anyway.
-USDA_DATA_TYPES = ["Foundation", "SR Legacy", "Survey (FNDDS)"]
+USDA_DATA_TYPES = list(_USDA_TYPE_RANK)
 
 # Open Food Facts nutriment fields (per 100g). Sodium and cholesterol are reported in g.
 _OFF_FIELDS = {
@@ -149,9 +147,12 @@ class NutritionSources:
     async def aclose(self) -> None:
         await self._http.aclose()
 
-    async def _get_json(self, source: str, url: str, params: dict[str, Any]) -> Any:
+    async def _get_json(self, source: str, url: str, params: dict[str, Any], body: dict[str, Any] | None = None) -> Any:
         try:
-            r = await self._http.get(url, params=params)
+            if body is None:
+                r = await self._http.get(url, params=params)
+            else:
+                r = await self._http.post(url, params=params, json=body)
         except httpx.TimeoutException as e:
             raise SourceError(f"{source} timed out") from e
         except httpx.HTTPError as e:
@@ -180,15 +181,13 @@ class NutritionSources:
         key = f"usda:{_normalize(food_name)}"
         cached = self._cache.get(key)
         if cached is None:
+            # POST with a JSON body: USDA's gateway 400s some dataType combinations in a
+            # query string (e.g. "SR Legacy" together with "Survey (FNDDS)"; verified 2026-09).
             data = await self._get_json(
                 "USDA",
                 USDA_SEARCH_URL,
-                {
-                    "api_key": self._usda_key,
-                    "query": food_name,
-                    "pageSize": MAX_RESULTS,
-                    "dataType": USDA_DATA_TYPES,
-                },
+                {"api_key": self._usda_key},
+                {"query": food_name, "pageSize": MAX_RESULTS, "dataType": USDA_DATA_TYPES},
             )
             foods = data.get("foods") if isinstance(data, dict) else None
             if not isinstance(foods, list):

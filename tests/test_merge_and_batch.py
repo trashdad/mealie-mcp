@@ -112,7 +112,7 @@ async def test_lookup_nutrition_multiple_names(tmp_path, monkeypatch):
     seen = []
 
     def handler(request: httpx.Request) -> httpx.Response:
-        query = request.url.params.get("query") or request.url.params.get("q")
+        query = json.loads(request.content)["query"] if request.method == "POST" else request.url.params.get("q")
         seen.append(query)
         if request.url.host == "api.nal.usda.gov":
             if query == "unobtainium":
