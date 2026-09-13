@@ -51,6 +51,9 @@ _USDA_KCAL_IDS = (1008, 2048, 2047)
 _USDA_KJ_ID = 1062
 # Whole/generic foods first; branded products (marketing names, per-label data) last.
 _USDA_TYPE_RANK = {"Foundation": 0, "SR Legacy": 1, "Survey (FNDDS)": 2, "Branded": 3}
+# Types requested. USDA's gateway answers HTTP 400 when all four are requested at
+# once (verified 2026-09); branded products are Open Food Facts' strength anyway.
+USDA_DATA_TYPES = ["Foundation", "SR Legacy", "Survey (FNDDS)"]
 
 # Open Food Facts nutriment fields (per 100g). Sodium and cholesterol are reported in g.
 _OFF_FIELDS = {
@@ -184,7 +187,7 @@ class NutritionSources:
                     "api_key": self._usda_key,
                     "query": food_name,
                     "pageSize": MAX_RESULTS,
-                    "dataType": list(_USDA_TYPE_RANK),
+                    "dataType": USDA_DATA_TYPES,
                 },
             )
             foods = data.get("foods") if isinstance(data, dict) else None
