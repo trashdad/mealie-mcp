@@ -1,9 +1,10 @@
-name: Build and publish Docker image
+name: Test, build and publish Docker image
 
 on:
   push:
     branches: [main]
     tags: ["v*"]
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -11,7 +12,19 @@ permissions:
   packages: write
 
 jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -e ".[test]"
+      - run: pytest
+
   build:
+    needs: test
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -28,11 +41,14 @@ jobs:
       - id: meta
         uses: docker/metadata-action@v5
         with:
+          # Image path follows the GitHub repo name: ghcr.io/<owner>/<repo>
           images: ghcr.io/${{ github.repository }}
           tags: |
             type=raw,value=latest,enable={{is_default_branch}}
             type=semver,pattern={{version}}
             type=sha
+          labels: |
+            org.opencontainers.image.title=mealie-sous-chef
 
       - uses: docker/build-push-action@v6
         with:
