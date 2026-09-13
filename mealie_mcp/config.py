@@ -9,6 +9,12 @@ class Settings(BaseSettings):
     mealie_url: AnyHttpUrl
     mealie_api_token: str
 
+    # Nutrition lookups (optional). USDA FoodData Central: free key at
+    # https://fdc.nal.usda.gov/api-key-signup.html -- without one, requests fall back
+    # to the shared DEMO_KEY, which is heavily rate-limited (fine for occasional use,
+    # not for bulk-processing a recipe collection). Open Food Facts needs no key.
+    usda_api_key: str = "DEMO_KEY"
+
     # This server
     public_url: AnyHttpUrl
     mcp_login_password: str

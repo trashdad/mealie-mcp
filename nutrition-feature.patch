@@ -1,0 +1,842 @@
+diff --git a/.env.example b/.env.example
+index 03840f0..1d16979 100644
+--- a/.env.example
++++ b/.env.example
+@@ -20,3 +20,9 @@ MCP_LOGIN_PASSWORD=change-me-to-something-long
+ 
+ # --- Optional: Cloudflare Tunnel (docker compose --profile cloudflared up -d) ---
+ #TUNNEL_TOKEN=
++
++# --- Optional: nutrition lookups (lookup_nutrition tool) ---
++# Free key, takes a couple minutes: https://fdc.nal.usda.gov/api-key-signup.html
++# Without one, requests fall back to the shared DEMO_KEY, which is fine for
++# occasional lookups but heavily rate-limited for bulk-processing a recipe collection.
++#USDA_API_KEY=change-me
+diff --git a/NUTRITION.md b/NUTRITION.md
+new file mode 100644
+index 0000000..5d1bafc
+--- /dev/null
++++ b/NUTRITION.md
+@@ -0,0 +1,83 @@
++# Structured ingredients + nutrition — what this fork adds
++
++This adds 8 new tools (and revises `create_recipe`/`update_recipe`) on top of
++the original retr083/mealie-mcp, closing the gap [issue #152](https://github.com/2fst4u/mealie-mcp/issues/152)
++describes on a different fork. It went through a second pass after reviewing
++several other Mealie MCP implementations, borrowing two design decisions from
++[mgummich/mcp-mealie](https://github.com/mgummich/mcp-mealie) (its own
++nutrition/parser coverage is thin, but its ergonomics for this specific piece
++are cleaner than what we started with): ingredients parse **transparently**
++inside `create_recipe`/`update_recipe` rather than needing a separate step,
++and Foods/Units management collapsed into one `manage_taxonomy` tool instead
++of nine separate ones.
++
++**Important context, unchanged from before:** Mealie itself does **not**
++auto-calculate nutrition from linked ingredients — its nutrition field is a
++static, manually-entered number per recipe. Everything nutrition-related
++here (`lookup_nutrition`, `set_food_nutrition`, `compute_recipe_nutrition`)
++is new logic this fork adds on top, not a hidden Mealie feature switched on.
++
++## The workflow, end to end
++
++For a recipe with free-text ingredients (most of your 24 existing recipes):
++
++1. **Just call `update_recipe`** with plain ingredient strings, e.g.
++   `["2 cups jasmine rice", "8 oz chicken thighs, boneless skinless"]`. Behind
++   the scenes this batch-parses them through Mealie's own NLP parser in one
++   call and links each to an existing Food/Unit when one matches (your
++   instance already has 253 foods, 22 units from prior imports) — nothing
++   extra to call first. Lines with no match are kept as free text, not
++   dropped.
++   - Want to see matches before committing, or override the parser's guess?
++     Call `parse_ingredients` first (read-only) and build the ingredient list
++     yourself with `{"quantity": ..., "food_id": ..., "unit_id": ..., "note": ...}`
++     dicts — `update_recipe` accepts a mix of plain strings and these dicts in
++     the same call.
++2. **`manage_taxonomy(resource="foods", action="create", name="...")`** — only
++   for ingredients the parser truly couldn't match to anything existing.
++3. **`lookup_nutrition`** — searches USDA FoodData Central and Open Food
++   Facts for a food name, returns per-100g candidates from both.
++4. **`set_food_nutrition`** — pick the best candidate (or `source="manual"`
++   for numbers off a label yourself) and attach it to the food. This is
++   stored once per food and reused by every recipe using it.
++5. **`compute_recipe_nutrition`** — sums each linked food's nutrition ×
++   quantity, converts units to grams (exactly if the unit has
++   `standardQuantity`/`standardUnit` set via `manage_taxonomy`, approximately
++   otherwise), divides by servings, writes it into the recipe, and reports
++   anything it couldn't account for so the total is honest about its gaps.
++
++Steps 2-4 only need to happen once per distinct food — after your pantry's
++staples are built out the first time, most new recipes parse straight into
++already-known, already-priced-nutrition foods.
++
++## Cleaning up duplicates
++
++Your 253 existing foods almost certainly have near-duplicates ("jasmine
++rice" vs "Jasmine Rice") from past imports. `manage_taxonomy` has a native
++`merge` action for this: `action="merge", item_id=<the one to drop>,
++merge_into=<the one to keep>` repoints every recipe/shopping-item using the
++dropped one and removes it — safer than `delete`, which just fails if
++anything still references the item. `items` batches this (or any action)
++across many entries in one call.
++
++## Unit accuracy
++
++`compute_recipe_nutrition` is only as accurate as its gram conversions.
++Mealie's default units generally don't have `standardQuantity` set, so the
++fork falls back to rough, water-density volume estimates (a cup ~= 240g) for
++anything not explicitly configured. Worth spending a few minutes on your
++most-used units (cup, tbsp, tsp, oz -- especially for dense stuff like flour
++or rice where 240g/cup is off) via `manage_taxonomy(resource="units",
++action="update", item_id=..., data={"standardQuantity": ..., "standardUnit": "g"})`
++if you want tighter numbers; one-time cost per unit, not per recipe.
++
++## New/changed tools
++
++| Tool | What it does |
++|---|---|
++| `create_recipe` / `update_recipe` | *(revised)* ingredients now accept a mix of plain strings (auto-parsed + linked) and structured dicts |
++| `manage_taxonomy` | Foods/Units: list, create, update, merge, delete -- single or batched via `items` |
++| `parse_ingredients` | Read-only preview of how text will parse, before saving |
++| `lookup_nutrition` | Search USDA + Open Food Facts, per-100g candidates |
++| `set_food_nutrition` | Attach per-100g nutrition to a food (cached, reused across recipes) |
++| `compute_recipe_nutrition` | Roll up + write a recipe's per-serving nutrition |
+diff --git a/mealie_mcp/config.py b/mealie_mcp/config.py
+index 60dc5c3..cbd4bf8 100644
+--- a/mealie_mcp/config.py
++++ b/mealie_mcp/config.py
+@@ -9,6 +9,12 @@ class Settings(BaseSettings):
+     mealie_url: AnyHttpUrl
+     mealie_api_token: str
+ 
++    # Nutrition lookups (optional). USDA FoodData Central: free key at
++    # https://fdc.nal.usda.gov/api-key-signup.html -- without one, requests fall back
++    # to the shared DEMO_KEY, which is heavily rate-limited (fine for occasional use,
++    # not for bulk-processing a recipe collection). Open Food Facts needs no key.
++    usda_api_key: str = "DEMO_KEY"
++
+     # This server
+     public_url: AnyHttpUrl
+     mcp_login_password: str
+diff --git a/mealie_mcp/mealie.py b/mealie_mcp/mealie.py
+index d8eb2bc..ea550fc 100644
+--- a/mealie_mcp/mealie.py
++++ b/mealie_mcp/mealie.py
+@@ -2,6 +2,7 @@
+ 
+ from __future__ import annotations
+ 
++import uuid
+ from typing import Any
+ 
+ import httpx
+@@ -61,6 +62,43 @@ class MealieClient:
+         return await self.request("DELETE", path, params=params)
+ 
+ 
++# ---------- ingredient payload building (used by create_recipe/update_recipe) ----------
++
++def build_ingredient_payload(item: dict, original: str = "") -> dict:
++    """Turn one ingredient (already parsed, or already structured) into the shape
++    Mealie's recipe PATCH wants. Food/unit references need an id to link to an
++    existing entry; anything unresolved folds back into free-text `note` rather
++    than being silently dropped, so nothing about the original line is lost."""
++    food, unit = item.get("food"), item.get("unit")
++    payload: dict[str, Any] = {"quantity": item.get("quantity") or 0}
++
++    unresolved: list[str] = []
++    for value, key in ((unit, "unit"), (food, "food")):
++        if isinstance(value, dict) and value.get("id"):
++            payload[key] = {"id": value["id"]}
++        elif isinstance(value, dict) and value.get("name"):
++            unresolved.append(value["name"])
++        elif isinstance(value, str):
++            unresolved.append(value)
++
++    if unresolved and "food" not in payload and "unit" not in payload and original:
++        # Nothing resolved at all -- the original line reads better than a
++        # reassembled fragment ("pinch saffron"), and keeping the parsed
++        # quantity here would double it up ("500 500 g flour").
++        note = " ".join(p for p in [original, item.get("note") or ""] if p).strip()
++        payload["quantity"] = 0
++    else:
++        note = " ".join(p for p in [*unresolved, item.get("note") or ""] if p).strip()
++    payload["note"] = note
++    payload["display"] = note
++    payload["originalText"] = item.get("original_text") or original or note
++    # Mealie mints reference ids client-side; a null one fails validation.
++    payload["referenceId"] = item.get("reference_id") or str(uuid.uuid4())
++    if item.get("title"):
++        payload["title"] = item["title"]
++    return payload
++
++
+ # ---------- response shaping (keep tool output small for the model) ----------
+ 
+ def _names(items: list[dict] | None) -> list[str]:
+@@ -123,6 +161,112 @@ def shopping_item(i: dict) -> dict:
+     }
+ 
+ 
++def taxonomy_item(item: dict) -> dict:
++    """Shapes a food or unit for manage_taxonomy's replies. Unit-only fields are
++    simply absent on a food and vice versa, so one shape covers both."""
++    extras = item.get("extras") or {}
++    out = {
++        "id": item.get("id"),
++        "name": item.get("name"),
++        "plural_name": item.get("pluralName"),
++        "description": item.get("description") or "",
++    }
++    if "standardQuantity" in item or "standardUnit" in item:  # unit-only
++        out["standard_quantity"] = item.get("standardQuantity")
++        out["standard_unit"] = item.get("standardUnit")
++        out["abbreviation"] = item.get("abbreviation") or ""
++    if extras.get("nutrition_per_100g"):  # food-only, when we've set it
++        out["nutrition_per_100g"] = extras["nutrition_per_100g"]
++        out["nutrition_source"] = extras.get("nutrition_source")
++    return out
++
++
++def parsed_ingredient_summary(p: dict) -> dict:
++    ing = p.get("ingredient", {})
++    food = ing.get("food") or {}
++    unit = ing.get("unit") or {}
++    return {
++        "input": p.get("input"),
++        "quantity": ing.get("quantity"),
++        "unit_name": unit.get("name"),
++        "unit_id": unit.get("id"),  # present only if it matched an existing unit
++        "food_name": food.get("name"),
++        "food_id": food.get("id"),  # present only if it matched an existing food
++        "note": ing.get("note") or "",
++        "confidence": p.get("confidence", {}).get("average"),
++    }
++
++
++# Rough mass-equivalent for common units when Mealie's own unit record doesn't
++# have standardQuantity/standardUnit set. These are approximate (water-density
++# assumptions for volume units) and only used as a fallback -- accuracy improves
++# once a unit's standardQuantity/standardUnit is set via update_unit.
++_FALLBACK_GRAMS_PER_UNIT = {
++    "g": 1, "gram": 1, "grams": 1,
++    "kg": 1000, "kilogram": 1000,
++    "oz": 28.35, "ounce": 28.35,
++    "lb": 453.6, "pound": 453.6,
++    "ml": 1, "milliliter": 1,
++    "l": 1000, "liter": 1,
++    "cup": 240, "cups": 240,
++    "tbsp": 15, "tablespoon": 15,
++    "tsp": 5, "teaspoon": 5,
++}
++
++_NUTRIENT_KEYS = ["calories", "protein_g", "fat_g", "carbs_g", "fiber_g", "sugar_g", "sodium_mg"]
++
++
++def _grams_for(quantity: float, unit: dict | None) -> tuple[float | None, bool]:
++    """Returns (grams, is_estimate). None grams means we couldn't convert at all."""
++    if unit is None:
++        return None, False
++    std_qty, std_unit = unit.get("standardQuantity"), (unit.get("standardUnit") or "").lower()
++    if std_qty and std_unit in ("g", "ml"):
++        return quantity * std_qty, False
++    fallback = _FALLBACK_GRAMS_PER_UNIT.get((unit.get("name") or "").strip().lower())
++    if fallback:
++        return quantity * fallback, True
++    return None, False
++
++
++def estimate_recipe_nutrition(ingredients: list[dict], servings: float) -> dict:
++    """Sum per-100g nutrition (stored in each food's extras.nutrition_per_100g) across
++    a recipe's structured ingredients, scaled by quantity/unit, divided by servings to
++    match Mealie's per-serving nutrition convention. Ingredients without a linked food,
++    or whose food has no cached nutrition data, are reported separately rather than
++    silently skipped."""
++    totals = dict.fromkeys(_NUTRIENT_KEYS, 0.0)
++    used_estimate_conversion = False
++    unmatched: list[str] = []
++
++    for ing in ingredients:
++        food = ing.get("food")
++        label = (food or {}).get("name") or ing.get("note") or ing.get("display") or "(unnamed ingredient)"
++        per_100g = ((food or {}).get("extras") or {}).get("nutrition_per_100g")
++        if not food or not per_100g:
++            unmatched.append(f"{label}: no linked food with cached nutrition")
++            continue
++        grams, is_estimate = _grams_for(ing.get("quantity") or 0, ing.get("unit"))
++        if grams is None:
++            unmatched.append(f"{label}: couldn't convert its unit to grams/ml")
++            continue
++        used_estimate_conversion = used_estimate_conversion or is_estimate
++        factor = grams / 100.0
++        for key in _NUTRIENT_KEYS:
++            val = per_100g.get(key)
++            if val is not None:
++                totals[key] += val * factor
++
++    servings = servings or 1
++    per_serving = {k: round(v / servings, 1) for k, v in totals.items()}
++    return {
++        "per_serving": per_serving,
++        "servings_used": servings,
++        "unmatched_ingredients": unmatched,
++        "used_approximate_unit_conversion": used_estimate_conversion,
++    }
++
++
+ def plan_entry(e: dict) -> dict:
+     recipe = e.get("recipe") or {}
+     return {
+diff --git a/mealie_mcp/nutrition.py b/mealie_mcp/nutrition.py
+new file mode 100644
+index 0000000..dd65864
+--- /dev/null
++++ b/mealie_mcp/nutrition.py
+@@ -0,0 +1,181 @@
++"""Nutrition lookups against USDA FoodData Central and Open Food Facts, with a
++small on-disk cache so the same ingredient name isn't re-queried every time.
++
++Both sources return figures per 100g (or per 100ml, treated the same way here)
++so they can be combined and scaled consistently later when a recipe's nutrition
++is computed from its linked ingredients.
++"""
++
++from __future__ import annotations
++
++import asyncio
++import json
++import re
++from pathlib import Path
++from typing import Any
++
++import httpx
++
++USDA_SEARCH_URL = "https://api.nal.usda.gov/fdc/v1/foods/search"
++OFF_SEARCH_URL = "https://world.openfoodfacts.org/cgi/search.pl"
++
++# Nutrient IDs used by USDA FoodData Central for the fields we care about.
++# (Full list: https://fdc.nal.usda.gov/api-spec/fdc_api.html#/FDC/getFoodsList)
++_USDA_NUTRIENT_IDS = {
++    "calories": 1008,       # Energy (kcal)
++    "protein_g": 1003,
++    "fat_g": 1004,
++    "carbs_g": 1005,
++    "fiber_g": 1079,
++    "sugar_g": 2000,
++    "sodium_mg": 1093,
++}
++
++# Open Food Facts field names for the same nutrients, per 100g.
++_OFF_NUTRIENT_FIELDS = {
++    "calories": "energy-kcal_100g",
++    "protein_g": "proteins_100g",
++    "fat_g": "fat_100g",
++    "carbs_g": "carbohydrates_100g",
++    "fiber_g": "fiber_100g",
++    "sugar_g": "sugars_100g",
++    "sodium_mg": "sodium_100g",  # OFF reports sodium in g; converted below
++}
++
++
++def _normalize(name: str) -> str:
++    return re.sub(r"\s+", " ", name.strip().lower())
++
++
++class NutritionCache:
++    """Flat JSON file cache: {"usda:chicken thigh": {...}, "off:chicken thigh": {...}}."""
++
++    def __init__(self, data_dir: str):
++        self._path = Path(data_dir) / "nutrition_cache.json"
++        self._data: dict[str, Any] = {}
++        if self._path.exists():
++            try:
++                self._data = json.loads(self._path.read_text())
++            except (json.JSONDecodeError, OSError):
++                self._data = {}
++
++    def get(self, key: str) -> Any | None:
++        return self._data.get(key)
++
++    def set(self, key: str, value: Any) -> None:
++        self._data[key] = value
++        try:
++            self._path.parent.mkdir(parents=True, exist_ok=True)
++            self._path.write_text(json.dumps(self._data, indent=2))
++        except OSError:
++            pass  # cache is best-effort; a write failure shouldn't break a lookup
++
++
++class NutritionClient:
++    def __init__(self, data_dir: str, usda_api_key: str = "DEMO_KEY", timeout: float = 15.0):
++        self._usda_key = usda_api_key
++        self._http = httpx.AsyncClient(timeout=timeout)
++        self._cache = NutritionCache(data_dir)
++
++    async def aclose(self) -> None:
++        await self._http.aclose()
++
++    async def search_usda(self, food_name: str, max_results: int = 5) -> list[dict[str, Any]]:
++        """Search USDA FoodData Central. Returns candidates with per-100g macros,
++        best matches first. Prefers 'Foundation' and 'SR Legacy' data types (whole
++        foods) over 'Branded' (packaged products with marketing names)."""
++        cache_key = f"usda_search:{_normalize(food_name)}"
++        cached = self._cache.get(cache_key)
++        if cached is not None:
++            return cached
++
++        r = await self._http.get(
++            USDA_SEARCH_URL,
++            params={
++                "api_key": self._usda_key,
++                "query": food_name,
++                "pageSize": max_results,
++                "dataType": ["Foundation", "SR Legacy", "Branded"],
++            },
++        )
++        r.raise_for_status()
++        foods = r.json().get("foods", [])
++
++        results = []
++        for f in foods:
++            nutrients = {n.get("nutrientId"): n.get("value") for n in f.get("foodNutrients", [])}
++            per_100g = {
++                key: nutrients.get(nid)
++                for key, nid in _USDA_NUTRIENT_IDS.items()
++                if nutrients.get(nid) is not None
++            }
++            if not per_100g:
++                continue
++            results.append(
++                {
++                    "source": "usda",
++                    "source_id": str(f.get("fdcId")),
++                    "description": f.get("description"),
++                    "data_type": f.get("dataType"),
++                    "brand": f.get("brandOwner"),
++                    "per_100g": per_100g,
++                }
++            )
++        self._cache.set(cache_key, results)
++        return results
++
++    async def search_off(self, food_name: str, max_results: int = 5) -> list[dict[str, Any]]:
++        """Search Open Food Facts. Strongest for branded/packaged products;
++        weaker for generic whole foods than USDA."""
++        cache_key = f"off_search:{_normalize(food_name)}"
++        cached = self._cache.get(cache_key)
++        if cached is not None:
++            return cached
++
++        r = await self._http.get(
++            OFF_SEARCH_URL,
++            params={
++                "search_terms": food_name,
++                "search_simple": 1,
++                "action": "process",
++                "json": 1,
++                "page_size": max_results,
++            },
++            headers={"User-Agent": "mealie-mcp-nutrition/1.0"},
++        )
++        r.raise_for_status()
++        products = r.json().get("products", [])
++
++        results = []
++        for p in products:
++            nutriments = p.get("nutriments", {})
++            per_100g: dict[str, float] = {}
++            for key, field in _OFF_NUTRIENT_FIELDS.items():
++                val = nutriments.get(field)
++                if val is None:
++                    continue
++                per_100g[key] = val * 1000 if key == "sodium_mg" else val  # OFF sodium is in g
++            if not per_100g:
++                continue
++            results.append(
++                {
++                    "source": "off",
++                    "source_id": p.get("code"),
++                    "description": p.get("product_name") or food_name,
++                    "brand": p.get("brands"),
++                    "per_100g": per_100g,
++                }
++            )
++        self._cache.set(cache_key, results)
++        return results
++
++    async def search_both(self, food_name: str, max_results: int = 5) -> dict[str, list[dict[str, Any]]]:
++        usda_results, off_results = await asyncio.gather(
++            self.search_usda(food_name, max_results),
++            self.search_off(food_name, max_results),
++            return_exceptions=True,
++        )
++        return {
++            "usda": usda_results if not isinstance(usda_results, BaseException) else [],
++            "off": off_results if not isinstance(off_results, BaseException) else [],
++        }
+diff --git a/mealie_mcp/server.py b/mealie_mcp/server.py
+index 0aa419c..2c0b189 100644
+--- a/mealie_mcp/server.py
++++ b/mealie_mcp/server.py
+@@ -18,7 +18,18 @@ from mcp_types import ToolAnnotations
+ 
+ from .auth import MealieOAuthProvider
+ from .config import Settings
+-from .mealie import MealieClient, plan_entry, recipe_full, recipe_summary, shopping_item
++from .mealie import (
++    MealieClient,
++    build_ingredient_payload,
++    estimate_recipe_nutrition,
++    parsed_ingredient_summary,
++    plan_entry,
++    recipe_full,
++    recipe_summary,
++    shopping_item,
++    taxonomy_item,
++)
++from .nutrition import NutritionClient
+ 
+ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
+ log = logging.getLogger("mealie_mcp")
+@@ -26,6 +37,7 @@ log = logging.getLogger("mealie_mcp")
+ settings = Settings()
+ oauth = MealieOAuthProvider(settings)
+ _mealie: MealieClient | None = None
++_nutrition: NutritionClient | None = None
+ 
+ 
+ def mealie() -> MealieClient:
+@@ -33,15 +45,23 @@ def mealie() -> MealieClient:
+     return _mealie
+ 
+ 
++def nutrition() -> NutritionClient:
++    assert _nutrition is not None, "Nutrition client not initialised"
++    return _nutrition
++
++
+ @asynccontextmanager
+ async def lifespan(_: MCPServer) -> AsyncIterator[None]:
+-    global _mealie
++    global _mealie, _nutrition
+     _mealie = MealieClient(str(settings.mealie_url), settings.mealie_api_token)
++    _nutrition = NutritionClient(settings.mcp_data_dir, settings.usda_api_key)
+     try:
+         yield
+     finally:
+         await _mealie.aclose()
++        await _nutrition.aclose()
+         _mealie = None
++        _nutrition = None
+ 
+ 
+ mcp = MCPServer(
+@@ -152,10 +172,38 @@ async def import_recipe_from_url(url: str, include_tags: bool = True) -> dict[st
+     return recipe_full(await mealie().get(f"/api/recipes/{slug}"))
+ 
+ 
++async def _ingredients_payload(items: list[Any]) -> list[dict[str, Any]]:
++    """Accepts a mix of plain strings ("2 cups flour") and structured dicts
++    ({"quantity": 2, "food_id": "...", "unit_id": "...", "note": "diced"}).
++    Plain strings are batch-parsed through Mealie's own ingredient parser in a
++    single call, matched against existing Foods/Units where possible; anything
++    unmatched folds back into free text rather than being dropped."""
++    strings = [i for i in items if isinstance(i, str)]
++    parsed_by_text: dict[str, dict] = {}
++    if strings:
++        results = await mealie().post("/api/parser/ingredients", {"parser": "nlp", "ingredients": strings})
++        for original, result in zip(strings, results):
++            parsed_by_text[original] = result.get("ingredient", {})
++
++    payload = []
++    for item in items:
++        if isinstance(item, str):
++            payload.append(build_ingredient_payload(parsed_by_text.get(item, {}), original=item))
++        else:
++            # Already-structured input: {"food_id": ..., "unit_id": ...} -> {"food": {"id": ...}}
++            normalized = dict(item)
++            if item.get("food_id"):
++                normalized["food"] = {"id": item["food_id"]}
++            if item.get("unit_id"):
++                normalized["unit"] = {"id": item["unit_id"]}
++            payload.append(build_ingredient_payload(normalized))
++    return payload
++
++
+ @mcp.tool(annotations=WRITE)
+ async def create_recipe(
+     name: str,
+-    ingredients: list[str],
++    ingredients: list[Any],
+     instructions: list[str],
+     description: str = "",
+     servings: int | None = None,
+@@ -164,12 +212,20 @@ async def create_recipe(
+     total_time: str | None = None,
+     source_url: str | None = None,
+ ) -> dict[str, Any]:
+-    """Create a recipe from scratch. Ingredients are free-text lines ("2 cups flour");
+-    instructions are one string per step. Times are free text ("20 minutes")."""
++    """Create a recipe from scratch. Instructions are one string per step; times
++    are free text ("20 minutes").
++
++    Ingredients can mix plain strings and structured dicts in the same list:
++      - "2 cups flour" -- run through Mealie's parser automatically, linked to
++        an existing food/unit when one matches, otherwise kept as free text.
++      - {"quantity": 2, "food_id": "...", "unit_id": "...", "note": "diced"} --
++        already resolved (food_id/unit_id from parse_ingredients or manage_taxonomy).
++    Use parse_ingredients first if you want to see/adjust matches before saving
++    rather than trusting the automatic parse."""
+     slug = await mealie().post("/api/recipes", {"name": name})
+     patch: dict[str, Any] = {
+         "description": description,
+-        "recipeIngredient": [{"note": line, "display": line} for line in ingredients],
++        "recipeIngredient": await _ingredients_payload(ingredients),
+         "recipeInstructions": [{"text": step} for step in instructions],
+     }
+     if servings is not None:
+@@ -190,7 +246,7 @@ async def update_recipe(
+     slug: str,
+     name: str | None = None,
+     description: str | None = None,
+-    ingredients: list[str] | None = None,
++    ingredients: list[Any] | None = None,
+     instructions: list[str] | None = None,
+     servings: int | None = None,
+     prep_time: str | None = None,
+@@ -198,15 +254,16 @@ async def update_recipe(
+     total_time: str | None = None,
+     rating: int | None = None,
+ ) -> dict[str, Any]:
+-    """Update parts of a recipe. Only the fields you pass are changed; ingredients/instructions
+-    replace the whole list when given."""
++    """Update parts of a recipe. Only the fields you pass are changed; ingredients/
++    instructions replace the whole list when given. Ingredients accept the same
++    mixed plain-string/structured-dict input as create_recipe -- see its docstring."""
+     patch: dict[str, Any] = {}
+     if name is not None:
+         patch["name"] = name
+     if description is not None:
+         patch["description"] = description
+     if ingredients is not None:
+-        patch["recipeIngredient"] = [{"note": line, "display": line} for line in ingredients]
++        patch["recipeIngredient"] = await _ingredients_payload(ingredients)
+     if instructions is not None:
+         patch["recipeInstructions"] = [{"text": step} for step in instructions]
+     if servings is not None:
+@@ -242,6 +299,215 @@ async def list_tags_and_categories() -> dict[str, list[str]]:
+     }
+ 
+ 
++# ---------------------------------------------------------------- foods & units
++# Mealie's "Foods" database is what recipe ingredients link to once parsed into
++# structured form (create_recipe/update_recipe do this automatically for plain-
++# text ingredients). Nutrition data lives in each food's `extras` field (Mealie's
++# generic per-item key/value store) under `nutrition_per_100g`, since Mealie
++# itself only stores a static, manually-entered nutrition total per recipe.
++
++_TAXONOMY_PATHS = {"foods": "/api/foods", "units": "/api/units"}
++_MERGE_KEYS = {"foods": ("fromFood", "toFood"), "units": ("fromUnit", "toUnit")}
++
++
++async def _taxonomy_apply(
++    resource: str,
++    action: str,
++    name: str | None = None,
++    item_id: str | None = None,
++    data: dict[str, Any] | None = None,
++    merge_into: str | None = None,
++) -> dict[str, Any]:
++    path = _TAXONOMY_PATHS[resource]
++
++    if action == "create":
++        if not name:
++            raise ValueError("create requires a name")
++        return taxonomy_item(await mealie().post(path, {**(data or {}), "name": name}))
++
++    if action == "merge":
++        if not item_id or not merge_into:
++            raise ValueError("merge requires item_id (the one being folded in) and merge_into (the one kept)")
++        from_key, to_key = _MERGE_KEYS[resource]
++        merged = await mealie().put(f"{path}/merge", {from_key: item_id, to_key: merge_into})
++        return {**taxonomy_item(merged or {}), "merged": item_id, "into": merge_into}
++
++    if action == "update":
++        if not item_id:
++            raise ValueError("update requires an item_id (from action='list')")
++        if name is None and not data:
++            raise ValueError("update requires name and/or data")
++        current = await mealie().get(f"{path}/{item_id}")
++        payload = {**current, **(data or {})}
++        if name is not None:
++            payload["name"] = name
++        return taxonomy_item(await mealie().put(f"{path}/{item_id}", payload))
++
++    if not item_id:
++        raise ValueError("delete requires an item_id (from action='list')")
++    try:
++        await mealie().delete(f"{path}/{item_id}")
++    except Exception as e:  # noqa: BLE001
++        # Mealie refuses the delete (409-style) if a recipe/shopping item still
++        # references this row. Merge is the fix; surface that instead of a raw error.
++        raise ValueError(
++            f"{resource} item {item_id!r} is still referenced elsewhere, so Mealie refused "
++            f"the delete ({e}). Merge it into another item instead: action='merge', "
++            f"item_id={item_id!r}, merge_into=<the one to keep>."
++        ) from e
++    return {"deleted": item_id}
++
++
++@mcp.tool(annotations=WRITE)
++async def manage_taxonomy(
++    resource: Literal["foods", "units"],
++    action: Literal["list", "create", "update", "merge", "delete"] = "list",
++    query: str = "",
++    page: int = 1,
++    per_page: int = 25,
++    name: str | None = None,
++    item_id: str | None = None,
++    data: dict[str, Any] | None = None,
++    merge_into: str | None = None,
++    items: list[dict[str, Any]] | None = None,
++) -> dict[str, Any]:
++    """List, create, update, merge, or delete entries in Mealie's Foods or Units
++    database -- what recipe ingredients link to (create_recipe/update_recipe link
++    them automatically for plain-text input; use this for browsing, cleanup, and
++    tidying duplicates).
++
++    action="list" (default): query/page/per_page apply; everything else ignored.
++    action="create": needs `name`; `data` may add e.g. {"pluralName": "..."} for
++      foods, or {"standardQuantity": 240, "standardUnit": "g"} for units (set
++      this so compute_recipe_nutrition can convert the unit to grams exactly
++      instead of approximating).
++    action="update": needs `item_id`; `name` and/or `data` change fields, others
++      keep their current value.
++    action="merge": needs `item_id` (folded away) and `merge_into` (kept);
++      repoints every recipe/shopping-item using `item_id` to `merge_into` and
++      deletes `item_id`. Use this instead of delete when duplicates exist (e.g.
++      "jasmine rice" and "Jasmine Rice") -- delete alone fails if anything still
++      references the item.
++    action="delete": needs `item_id`. Fails (with a merge suggestion) if the
++      item is still referenced anywhere.
++
++    `items`: batch any non-list action -- a list of dicts using the same keys
++    (name, item_id, data, merge_into), each run in one pass. Errors on one item
++    don't stop the rest; the reply separates results from errors.
++    """
++    if resource not in _TAXONOMY_PATHS:
++        raise ValueError(f"resource must be one of {', '.join(_TAXONOMY_PATHS)}")
++
++    if action == "list":
++        if items:
++            raise ValueError("items batches writes, not list")
++        params: dict[str, Any] = {"page": page, "perPage": min(max(per_page, 1), 50)}
++        if query:
++            params["search"] = query
++        data_page = await mealie().get(_TAXONOMY_PATHS[resource], params)
++        return {
++            "page": data_page.get("page"),
++            "total_pages": data_page.get("total_pages"),
++            "total": data_page.get("total"),
++            "items": [taxonomy_item(i) for i in data_page.get("items", [])],
++        }
++
++    if items:
++        results, errors = [], []
++        for i, batch_item in enumerate(items):
++            try:
++                results.append(
++                    await _taxonomy_apply(
++                        resource,
++                        action,
++                        name=batch_item.get("name"),
++                        item_id=batch_item.get("item_id"),
++                        data=batch_item.get("data"),
++                        merge_into=batch_item.get("merge_into"),
++                    )
++                )
++            except Exception as e:  # noqa: BLE001
++                errors.append({"index": i, "item": batch_item, "error": str(e)})
++        return {"results": results, "errors": errors}
++
++    return await _taxonomy_apply(resource, action, name=name, item_id=item_id, data=data, merge_into=merge_into)
++
++
++# ---------------------------------------------------------------- ingredient parser
++
++@mcp.tool(annotations=READ)
++async def parse_ingredients(
++    lines: list[str],
++    parser: Literal["nlp", "brute"] = "nlp",
++) -> list[dict[str, Any]]:
++    """Parse free-text ingredient lines ("2 cups flour") into structured
++    quantity/unit/food, matched against Mealie's existing Foods/Units where
++    possible. Read-only/inspection only -- create_recipe and update_recipe run
++    this automatically, so you only need this tool to preview or adjust matches
++    before saving (e.g. picking a different food than the parser's top guess)."""
++    data = await mealie().post("/api/parser/ingredients", {"parser": parser, "ingredients": lines})
++    return [parsed_ingredient_summary(p) for p in data]
++
++
++# ---------------------------------------------------------------- nutrition
++
++@mcp.tool(annotations=READ)
++async def lookup_nutrition(food_name: str, max_results: int = 5) -> dict[str, list[dict[str, Any]]]:
++    """Search USDA FoodData Central and Open Food Facts for a food's nutrition
++    (per 100g: calories, protein_g, fat_g, carbs_g, fiber_g, sugar_g, sodium_mg).
++    Returns candidates from both sources for you/the user to pick the best match --
++    USDA is generally better for whole/generic foods, Open Food Facts for branded
++    products. Pick one and call set_food_nutrition with its per_100g data."""
++    return await nutrition().search_both(food_name, max_results)
++
++
++@mcp.tool(annotations=WRITE)
++async def set_food_nutrition(
++    food_id: str,
++    per_100g: dict[str, float],
++    source: Literal["usda", "off", "manual"] = "usda",
++    source_id: str | None = None,
++) -> dict[str, Any]:
++    """Attach nutrition data (per 100g) to a Mealie food, so compute_recipe_nutrition
++    can use it. per_100g keys: calories, protein_g, fat_g, carbs_g, fiber_g, sugar_g,
++    sodium_mg (omit any you don't have). Get values from lookup_nutrition, or pass
++    source="manual" for numbers off a package label yourself."""
++    current = await mealie().get(f"/api/foods/{food_id}")
++    extras = current.get("extras") or {}
++    extras["nutrition_per_100g"] = per_100g
++    extras["nutrition_source"] = source
++    if source_id:
++        extras["nutrition_source_id"] = source_id
++    current["extras"] = extras
++    return food_summary(await mealie().put(f"/api/foods/{food_id}", current))
++
++
++@mcp.tool(annotations=WRITE)
++async def compute_recipe_nutrition(slug: str, save: bool = True) -> dict[str, Any]:
++    """Roll up per-serving nutrition for a recipe from its linked ingredients'
++    cached nutrition (set via set_food_nutrition) and quantities, and (if save=true)
++    write the result into the recipe's nutrition field. Reports any ingredients it
++    couldn't account for (unlinked to a food, or that food has no nutrition cached)
++    so you know the total is a floor, not necessarily complete. Requires ingredients
++    to be structured (see update_recipe_ingredients_structured) -- free-text
++    ingredients are always reported as unmatched."""
++    recipe = await mealie().get(f"/api/recipes/{slug}")
++    result = estimate_recipe_nutrition(recipe.get("recipeIngredient") or [], recipe.get("recipeServings") or 1)
++    if save:
++        n = result["per_serving"]
++        nutrition_patch = {
++            "calories": str(n.get("calories", 0)),
++            "proteinContent": str(n.get("protein_g", 0)),
++            "fatContent": str(n.get("fat_g", 0)),
++            "carbohydrateContent": str(n.get("carbs_g", 0)),
++            "fiberContent": str(n.get("fiber_g", 0)),
++            "sugarContent": str(n.get("sugar_g", 0)),
++            "sodiumContent": str(n.get("sodium_mg", 0)),
++        }
++        await mealie().patch(f"/api/recipes/{slug}", {"nutrition": nutrition_patch})
++    return result
++
++
+ # ---------------------------------------------------------------- shopping lists
+ 
+ @mcp.tool(annotations=READ)

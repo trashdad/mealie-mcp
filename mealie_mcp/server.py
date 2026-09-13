@@ -18,7 +18,18 @@ from mcp_types import ToolAnnotations
 
 from .auth import MealieOAuthProvider
 from .config import Settings
-from .mealie import MealieClient, plan_entry, recipe_full, recipe_summary, shopping_item
+from .mealie import (
+    MealieClient,
+    build_ingredient_payload,
+    estimate_recipe_nutrition,
+    parsed_ingredient_summary,
+    plan_entry,
+    recipe_full,
+    recipe_summary,
+    shopping_item,
+    taxonomy_item,
+)
+from .nutrition import NutritionClient
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 log = logging.getLogger("mealie_mcp")
@@ -26,6 +37,7 @@ log = logging.getLogger("mealie_mcp")
 settings = Settings()
 oauth = MealieOAuthProvider(settings)
 _mealie: MealieClient | None = None
+_nutrition: NutritionClient | None = None
 
 
 def mealie() -> MealieClient:
@@ -33,15 +45,23 @@ def mealie() -> MealieClient:
     return _mealie
 
 
+def nutrition() -> NutritionClient:
+    assert _nutrition is not None, "Nutrition client not initialised"
+    return _nutrition
+
+
 @asynccontextmanager
 async def lifespan(_: MCPServer) -> AsyncIterator[None]:
-    global _mealie
+    global _mealie, _nutrition
     _mealie = MealieClient(str(settings.mealie_url), settings.mealie_api_token)
+    _nutrition = NutritionClient(settings.mcp_data_dir, settings.usda_api_key)
     try:
         yield
     finally:
         await _mealie.aclose()
+        await _nutrition.aclose()
         _mealie = None
+        _nutrition = None
 
 
 mcp = MCPServer(
@@ -152,10 +172,38 @@ async def import_recipe_from_url(url: str, include_tags: bool = True) -> dict[st
     return recipe_full(await mealie().get(f"/api/recipes/{slug}"))
 
 
+async def _ingredients_payload(items: list[Any]) -> list[dict[str, Any]]:
+    """Accepts a mix of plain strings ("2 cups flour") and structured dicts
+    ({"quantity": 2, "food_id": "...", "unit_id": "...", "note": "diced"}).
+    Plain strings are batch-parsed through Mealie's own ingredient parser in a
+    single call, matched against existing Foods/Units where possible; anything
+    unmatched folds back into free text rather than being dropped."""
+    strings = [i for i in items if isinstance(i, str)]
+    parsed_by_text: dict[str, dict] = {}
+    if strings:
+        results = await mealie().post("/api/parser/ingredients", {"parser": "nlp", "ingredients": strings})
+        for original, result in zip(strings, results):
+            parsed_by_text[original] = result.get("ingredient", {})
+
+    payload = []
+    for item in items:
+        if isinstance(item, str):
+            payload.append(build_ingredient_payload(parsed_by_text.get(item, {}), original=item))
+        else:
+            # Already-structured input: {"food_id": ..., "unit_id": ...} -> {"food": {"id": ...}}
+            normalized = dict(item)
+            if item.get("food_id"):
+                normalized["food"] = {"id": item["food_id"]}
+            if item.get("unit_id"):
+                normalized["unit"] = {"id": item["unit_id"]}
+            payload.append(build_ingredient_payload(normalized))
+    return payload
+
+
 @mcp.tool(annotations=WRITE)
 async def create_recipe(
     name: str,
-    ingredients: list[str],
+    ingredients: list[Any],
     instructions: list[str],
     description: str = "",
     servings: int | None = None,
@@ -164,12 +212,20 @@ async def create_recipe(
     total_time: str | None = None,
     source_url: str | None = None,
 ) -> dict[str, Any]:
-    """Create a recipe from scratch. Ingredients are free-text lines ("2 cups flour");
-    instructions are one string per step. Times are free text ("20 minutes")."""
+    """Create a recipe from scratch. Instructions are one string per step; times
+    are free text ("20 minutes").
+
+    Ingredients can mix plain strings and structured dicts in the same list:
+      - "2 cups flour" -- run through Mealie's parser automatically, linked to
+        an existing food/unit when one matches, otherwise kept as free text.
+      - {"quantity": 2, "food_id": "...", "unit_id": "...", "note": "diced"} --
+        already resolved (food_id/unit_id from parse_ingredients or manage_taxonomy).
+    Use parse_ingredients first if you want to see/adjust matches before saving
+    rather than trusting the automatic parse."""
     slug = await mealie().post("/api/recipes", {"name": name})
     patch: dict[str, Any] = {
         "description": description,
-        "recipeIngredient": [{"note": line, "display": line} for line in ingredients],
+        "recipeIngredient": await _ingredients_payload(ingredients),
         "recipeInstructions": [{"text": step} for step in instructions],
     }
     if servings is not None:
@@ -190,7 +246,7 @@ async def update_recipe(
     slug: str,
     name: str | None = None,
     description: str | None = None,
-    ingredients: list[str] | None = None,
+    ingredients: list[Any] | None = None,
     instructions: list[str] | None = None,
     servings: int | None = None,
     prep_time: str | None = None,
@@ -198,15 +254,16 @@ async def update_recipe(
     total_time: str | None = None,
     rating: int | None = None,
 ) -> dict[str, Any]:
-    """Update parts of a recipe. Only the fields you pass are changed; ingredients/instructions
-    replace the whole list when given."""
+    """Update parts of a recipe. Only the fields you pass are changed; ingredients/
+    instructions replace the whole list when given. Ingredients accept the same
+    mixed plain-string/structured-dict input as create_recipe -- see its docstring."""
     patch: dict[str, Any] = {}
     if name is not None:
         patch["name"] = name
     if description is not None:
         patch["description"] = description
     if ingredients is not None:
-        patch["recipeIngredient"] = [{"note": line, "display": line} for line in ingredients]
+        patch["recipeIngredient"] = await _ingredients_payload(ingredients)
     if instructions is not None:
         patch["recipeInstructions"] = [{"text": step} for step in instructions]
     if servings is not None:
@@ -240,6 +297,215 @@ async def list_tags_and_categories() -> dict[str, list[str]]:
         "tags": sorted(t["slug"] for t in tags.get("items", [])),
         "categories": sorted(c["slug"] for c in cats.get("items", [])),
     }
+
+
+# ---------------------------------------------------------------- foods & units
+# Mealie's "Foods" database is what recipe ingredients link to once parsed into
+# structured form (create_recipe/update_recipe do this automatically for plain-
+# text ingredients). Nutrition data lives in each food's `extras` field (Mealie's
+# generic per-item key/value store) under `nutrition_per_100g`, since Mealie
+# itself only stores a static, manually-entered nutrition total per recipe.
+
+_TAXONOMY_PATHS = {"foods": "/api/foods", "units": "/api/units"}
+_MERGE_KEYS = {"foods": ("fromFood", "toFood"), "units": ("fromUnit", "toUnit")}
+
+
+async def _taxonomy_apply(
+    resource: str,
+    action: str,
+    name: str | None = None,
+    item_id: str | None = None,
+    data: dict[str, Any] | None = None,
+    merge_into: str | None = None,
+) -> dict[str, Any]:
+    path = _TAXONOMY_PATHS[resource]
+
+    if action == "create":
+        if not name:
+            raise ValueError("create requires a name")
+        return taxonomy_item(await mealie().post(path, {**(data or {}), "name": name}))
+
+    if action == "merge":
+        if not item_id or not merge_into:
+            raise ValueError("merge requires item_id (the one being folded in) and merge_into (the one kept)")
+        from_key, to_key = _MERGE_KEYS[resource]
+        merged = await mealie().put(f"{path}/merge", {from_key: item_id, to_key: merge_into})
+        return {**taxonomy_item(merged or {}), "merged": item_id, "into": merge_into}
+
+    if action == "update":
+        if not item_id:
+            raise ValueError("update requires an item_id (from action='list')")
+        if name is None and not data:
+            raise ValueError("update requires name and/or data")
+        current = await mealie().get(f"{path}/{item_id}")
+        payload = {**current, **(data or {})}
+        if name is not None:
+            payload["name"] = name
+        return taxonomy_item(await mealie().put(f"{path}/{item_id}", payload))
+
+    if not item_id:
+        raise ValueError("delete requires an item_id (from action='list')")
+    try:
+        await mealie().delete(f"{path}/{item_id}")
+    except Exception as e:  # noqa: BLE001
+        # Mealie refuses the delete (409-style) if a recipe/shopping item still
+        # references this row. Merge is the fix; surface that instead of a raw error.
+        raise ValueError(
+            f"{resource} item {item_id!r} is still referenced elsewhere, so Mealie refused "
+            f"the delete ({e}). Merge it into another item instead: action='merge', "
+            f"item_id={item_id!r}, merge_into=<the one to keep>."
+        ) from e
+    return {"deleted": item_id}
+
+
+@mcp.tool(annotations=WRITE)
+async def manage_taxonomy(
+    resource: Literal["foods", "units"],
+    action: Literal["list", "create", "update", "merge", "delete"] = "list",
+    query: str = "",
+    page: int = 1,
+    per_page: int = 25,
+    name: str | None = None,
+    item_id: str | None = None,
+    data: dict[str, Any] | None = None,
+    merge_into: str | None = None,
+    items: list[dict[str, Any]] | None = None,
+) -> dict[str, Any]:
+    """List, create, update, merge, or delete entries in Mealie's Foods or Units
+    database -- what recipe ingredients link to (create_recipe/update_recipe link
+    them automatically for plain-text input; use this for browsing, cleanup, and
+    tidying duplicates).
+
+    action="list" (default): query/page/per_page apply; everything else ignored.
+    action="create": needs `name`; `data` may add e.g. {"pluralName": "..."} for
+      foods, or {"standardQuantity": 240, "standardUnit": "g"} for units (set
+      this so compute_recipe_nutrition can convert the unit to grams exactly
+      instead of approximating).
+    action="update": needs `item_id`; `name` and/or `data` change fields, others
+      keep their current value.
+    action="merge": needs `item_id` (folded away) and `merge_into` (kept);
+      repoints every recipe/shopping-item using `item_id` to `merge_into` and
+      deletes `item_id`. Use this instead of delete when duplicates exist (e.g.
+      "jasmine rice" and "Jasmine Rice") -- delete alone fails if anything still
+      references the item.
+    action="delete": needs `item_id`. Fails (with a merge suggestion) if the
+      item is still referenced anywhere.
+
+    `items`: batch any non-list action -- a list of dicts using the same keys
+    (name, item_id, data, merge_into), each run in one pass. Errors on one item
+    don't stop the rest; the reply separates results from errors.
+    """
+    if resource not in _TAXONOMY_PATHS:
+        raise ValueError(f"resource must be one of {', '.join(_TAXONOMY_PATHS)}")
+
+    if action == "list":
+        if items:
+            raise ValueError("items batches writes, not list")
+        params: dict[str, Any] = {"page": page, "perPage": min(max(per_page, 1), 50)}
+        if query:
+            params["search"] = query
+        data_page = await mealie().get(_TAXONOMY_PATHS[resource], params)
+        return {
+            "page": data_page.get("page"),
+            "total_pages": data_page.get("total_pages"),
+            "total": data_page.get("total"),
+            "items": [taxonomy_item(i) for i in data_page.get("items", [])],
+        }
+
+    if items:
+        results, errors = [], []
+        for i, batch_item in enumerate(items):
+            try:
+                results.append(
+                    await _taxonomy_apply(
+                        resource,
+                        action,
+                        name=batch_item.get("name"),
+                        item_id=batch_item.get("item_id"),
+                        data=batch_item.get("data"),
+                        merge_into=batch_item.get("merge_into"),
+                    )
+                )
+            except Exception as e:  # noqa: BLE001
+                errors.append({"index": i, "item": batch_item, "error": str(e)})
+        return {"results": results, "errors": errors}
+
+    return await _taxonomy_apply(resource, action, name=name, item_id=item_id, data=data, merge_into=merge_into)
+
+
+# ---------------------------------------------------------------- ingredient parser
+
+@mcp.tool(annotations=READ)
+async def parse_ingredients(
+    lines: list[str],
+    parser: Literal["nlp", "brute"] = "nlp",
+) -> list[dict[str, Any]]:
+    """Parse free-text ingredient lines ("2 cups flour") into structured
+    quantity/unit/food, matched against Mealie's existing Foods/Units where
+    possible. Read-only/inspection only -- create_recipe and update_recipe run
+    this automatically, so you only need this tool to preview or adjust matches
+    before saving (e.g. picking a different food than the parser's top guess)."""
+    data = await mealie().post("/api/parser/ingredients", {"parser": parser, "ingredients": lines})
+    return [parsed_ingredient_summary(p) for p in data]
+
+
+# ---------------------------------------------------------------- nutrition
+
+@mcp.tool(annotations=READ)
+async def lookup_nutrition(food_name: str, max_results: int = 5) -> dict[str, list[dict[str, Any]]]:
+    """Search USDA FoodData Central and Open Food Facts for a food's nutrition
+    (per 100g: calories, protein_g, fat_g, carbs_g, fiber_g, sugar_g, sodium_mg).
+    Returns candidates from both sources for you/the user to pick the best match --
+    USDA is generally better for whole/generic foods, Open Food Facts for branded
+    products. Pick one and call set_food_nutrition with its per_100g data."""
+    return await nutrition().search_both(food_name, max_results)
+
+
+@mcp.tool(annotations=WRITE)
+async def set_food_nutrition(
+    food_id: str,
+    per_100g: dict[str, float],
+    source: Literal["usda", "off", "manual"] = "usda",
+    source_id: str | None = None,
+) -> dict[str, Any]:
+    """Attach nutrition data (per 100g) to a Mealie food, so compute_recipe_nutrition
+    can use it. per_100g keys: calories, protein_g, fat_g, carbs_g, fiber_g, sugar_g,
+    sodium_mg (omit any you don't have). Get values from lookup_nutrition, or pass
+    source="manual" for numbers off a package label yourself."""
+    current = await mealie().get(f"/api/foods/{food_id}")
+    extras = current.get("extras") or {}
+    extras["nutrition_per_100g"] = per_100g
+    extras["nutrition_source"] = source
+    if source_id:
+        extras["nutrition_source_id"] = source_id
+    current["extras"] = extras
+    return food_summary(await mealie().put(f"/api/foods/{food_id}", current))
+
+
+@mcp.tool(annotations=WRITE)
+async def compute_recipe_nutrition(slug: str, save: bool = True) -> dict[str, Any]:
+    """Roll up per-serving nutrition for a recipe from its linked ingredients'
+    cached nutrition (set via set_food_nutrition) and quantities, and (if save=true)
+    write the result into the recipe's nutrition field. Reports any ingredients it
+    couldn't account for (unlinked to a food, or that food has no nutrition cached)
+    so you know the total is a floor, not necessarily complete. Requires ingredients
+    to be structured (see update_recipe_ingredients_structured) -- free-text
+    ingredients are always reported as unmatched."""
+    recipe = await mealie().get(f"/api/recipes/{slug}")
+    result = estimate_recipe_nutrition(recipe.get("recipeIngredient") or [], recipe.get("recipeServings") or 1)
+    if save:
+        n = result["per_serving"]
+        nutrition_patch = {
+            "calories": str(n.get("calories", 0)),
+            "proteinContent": str(n.get("protein_g", 0)),
+            "fatContent": str(n.get("fat_g", 0)),
+            "carbohydrateContent": str(n.get("carbs_g", 0)),
+            "fiberContent": str(n.get("fiber_g", 0)),
+            "sugarContent": str(n.get("sugar_g", 0)),
+            "sodiumContent": str(n.get("sodium_mg", 0)),
+        }
+        await mealie().patch(f"/api/recipes/{slug}", {"nutrition": nutrition_patch})
+    return result
 
 
 # ---------------------------------------------------------------- shopping lists
