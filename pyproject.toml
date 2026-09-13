@@ -1,7 +1,9 @@
 [project]
-name = "mealie-mcp"
-version = "0.1.0"
-description = "Remote MCP server for Mealie, with built-in OAuth so it can be added as a Claude custom connector (web / desktop / mobile)."
+name = "mealie-sous-chef"
+version = "0.2.0"
+description = "Remote MCP server for Mealie with built-in OAuth (a Claude custom connector for web / desktop / mobile), structured ingredients and per-serving nutrition."
+readme = "README.md"
+license = "MIT"
 requires-python = ">=3.12"
 dependencies = [
     "mcp==2.2.0",
@@ -11,12 +13,20 @@ dependencies = [
     "python-multipart>=0.0.9",
 ]
 
+[project.optional-dependencies]
+test = ["pytest>=8", "pytest-asyncio>=0.24"]
+
 [project.scripts]
-mealie-mcp = "mealie_mcp.server:main"
+mealie-sous-chef = "mealie_sous_chef.server:main"
 
 [build-system]
-requires = ["setuptools>=68"]
+requires = ["setuptools>=77"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["mealie_mcp*"]
+include = ["mealie_sous_chef*"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
