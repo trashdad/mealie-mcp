@@ -202,16 +202,22 @@ Each Mealie ingredient has a hidden `referenceId`. Instruction steps use it to l
 
 ### Weighing ingredients
 
-Nutrition is per 100 g, so every ingredient has to become grams. The most specific rule wins:
+Nutrition is per 100 g, so every ingredient has to become grams. Recipes mostly say "1 cup" or "2 eggs", not grams, so the conversion uses **USDA's official household measures**. USDA FoodData Central publishes, for each food, how much 1 cup, 1 tablespoon, 1 large, 1 clove and so on weighs (flour: 1 cup = 125 g; brown sugar: 1 cup packed = 220 g; egg: 1 large = 50 g). These are typical values; real kitchens vary by roughly 10–20% depending on how you scoop or chop, which is the accepted margin for recipe estimates.
 
-1. **The food's `portion_grams`** for that unit, set via `set_food_nutrition(portion_grams=…)`:
-   - `{"each": 50}` covers unitless lines like "2 eggs".
-   - `{"clove": 5}` covers garlic.
-   - `{"cup": 125}` covers flour.
-2. **The unit's standard** (`standardQuantity` + `standardUnit`, e.g. tablespoon = 0.5 `fluid_ounce`). Set it with `manage_taxonomy(resource="units", action="update", item_id=…, data={"standardQuantity": 0.5, "standardUnit": "fluid_ounce"})`. `standardUnit` is one of `gram`, `kilogram`, `ounce`, `pound`, `milliliter`, `liter`, `fluid_ounce`, `cup`. Many Mealie installs already have these set for the default units.
-3. **A built-in table** of common unit names and abbreviations (g, kg, oz, lb, ml, l, tsp, tbsp, cup, fl oz, pint, quart, gallon).
+The most specific source wins:
 
-Volume becomes grams using the food's `grams_per_ml` (flour ≈ 0.53, oil ≈ 0.92, honey ≈ 1.42). Without it, water density is assumed and the ingredient is listed under `approximate`. Units with no weight (bunch, can, packet) are reported, along with the setting that would fix them.
+1. **This food's own measures.**
+   - When you store nutrition from a USDA record (`set_food_nutrition(source="usda", source_id=…)`), that exact record's household measures are saved on the food too.
+   - You can also set weights yourself with `portion_grams` (e.g. `{"each": 50, "clove": 5}`) and `grams_per_ml`.
+2. **A built-in USDA reference table** of ~110 common ingredients: flours, sugars, oils, dairy, rice, spices, produce and more. It's matched by food name, plus the note, so "jasmine rice" with note "cooked" uses cooked rice. The table is generated from USDA data by `scripts/build_household_measures.py`, and every entry records its USDA FDC id.
+3. **Mass units** (g, kg, oz, lb, or a unit's Mealie standard) convert exactly.
+4. **Volume units** go through the food's density from (1) or (2). Only if nothing is known is water assumed, and those ingredients are listed under `approximate`.
+
+Details matter where USDA lists them:
+- A prep word in the note picks the right measure: a "packed" cup of brown sugar, a "chopped" vs "sliced" cup of onion.
+- A size word picks the right piece: "1 large onion" = 150 g, a plain "1 onion" = the medium 110 g, and eggs default to large.
+
+Mealie unit standards (`standardQuantity` + `standardUnit`, e.g. tablespoon = 0.5 `fluid_ounce`) still work and can be set with `manage_taxonomy(resource="units", action="update", …)`. Units with no known weight for a food (a "bunch" of something not in the table) are reported, with the setting that would fix them.
 
 ### What the result tells you
 
@@ -275,7 +281,7 @@ Every failure toast in Claude includes an `ofid_…` reference. If you file an i
 - **Tokens are stored unhashed** in `data/auth_state.json`. They're random 48-byte secrets, but treat that file like a password file; it lives in a Docker volume for that reason.
 - **No account/session UI.** To revoke everything, delete `data/auth_state.json` and restart.
 - **Nutrition is an estimate.** It's only as good as the source data you pick, the gram conversions and the parser's matches. Known gaps:
-  - Volume units are weighed as water until a food has `grams_per_ml`.
+  - Cup and spoon weights are USDA typical values (±10–20% in a real kitchen); foods not in the reference table and not linked to a USDA record are weighed as water.
   - Sub-recipes aren't rolled up.
   - Nothing checks raw vs cooked weights (pick the matching USDA entry).
   - `oz` always means weight, never fluid ounces.
@@ -323,6 +329,7 @@ Layout:
 | `recipe_ingredients.py` | Review and in-place editing of a recipe's ingredients |
 | `taxonomy.py` | Foods/Units management |
 | `nutrition.py` | Storage format, unit conversion, rollup |
+| `household_measures.py` | USDA cup/spoon/piece weights and the bundled reference table (`data/household_measures.json`) |
 | `nutrition_sources.py` | USDA/OFF client and cache |
 
 Built on the official [`mcp`](https://github.com/modelcontextprotocol/python-sdk) Python SDK (2.x). The SDK provides the `/authorize`, `/token`, `/register`, `/revoke` and `.well-known` endpoints; this project supplies the provider, login page, Mealie client and tools.
@@ -331,4 +338,4 @@ Built on the official [`mcp`](https://github.com/modelcontextprotocol/python-sdk
 
 - [retr083/mealie-mcp](https://github.com/retr083/mealie-mcp) by retr083 is the original server this project is forked from: OAuth provider, deployment setup, and the recipe, shopping-list and meal-plan tools. Its MIT license and copyright notice are kept in [LICENSE](LICENSE).
 - Two design choices were borrowed from [mgummich/mcp-mealie](https://github.com/mgummich/mcp-mealie): parsing ingredients transparently inside `create_recipe`/`update_recipe`, and one `manage_taxonomy` tool rather than separate tools per Foods/Units action.
-- Nutrition data comes from [USDA FoodData Central](https://fdc.nal.usda.gov/) (public domain) and [Open Food Facts](https://world.openfoodfacts.org/) (ODbL).
+- Nutrition data comes from [USDA FoodData Central](https://fdc.nal.usda.gov/) (public domain) and [Open Food Facts](https://world.openfoodfacts.org/) (ODbL). Household measures (cup, spoon and piece weights) are USDA FoodData Central SR Legacy / FNDDS data.

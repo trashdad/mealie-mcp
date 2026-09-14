@@ -76,7 +76,7 @@ def _nutrition_state(ing: dict) -> tuple[str, str]:
     profile = read_food_profile(food)
     if not profile.per_100g:
         return "missing_data", f"food {food.get('name')!r} has no nutrition data (lookup_nutrition -> set_food_nutrition)"
-    conv = quantity_to_grams(float(quantity), ing.get("unit"), profile)
+    conv = quantity_to_grams(float(quantity), ing.get("unit"), profile, ing.get("note") or "", food.get("name"))
     if conv.grams is None:
         return "cannot_weigh", conv.note
     if conv.approximate:

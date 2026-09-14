@@ -26,6 +26,7 @@ from .nutrition import NUTRIENTS
 log = logging.getLogger(__name__)
 
 USDA_SEARCH_URL = "https://api.nal.usda.gov/fdc/v1/foods/search"
+USDA_FOOD_URL = "https://api.nal.usda.gov/fdc/v1/food/{fdc_id}"
 OFF_SEARCH_URL = "https://search.openfoodfacts.org/search"  # search-a-licious, OFF's current search API
 OFF_LEGACY_SEARCH_URL = "https://world.openfoodfacts.org/cgi/search.pl"
 USER_AGENT = "mealie-sous-chef/0.2 (self-hosted Mealie MCP server)"
@@ -231,6 +232,26 @@ class NutritionSources:
         # stable sort keeps USDA's relevance order within each data type
         results.sort(key=lambda r: _USDA_TYPE_RANK.get(r.get("data_type") or "", 9))
         return results
+
+    async def usda_household_measures(self, fdc_id: str | int) -> dict[str, Any]:
+        """USDA's household measures (cup/spoon/piece weights) for one food record.
+        Returns {"description", "portion_grams", "grams_per_ml"}; raises SourceError."""
+        from .household_measures import parse_usda_portions
+
+        fdc = str(fdc_id).strip()
+        if not fdc.isdigit():
+            raise SourceError(f"USDA source_id must be a numeric FDC id, got {fdc_id!r}")
+        key = f"usda_measures:{fdc}"
+        cached = self._cache.get(key)
+        if cached:
+            return cached[0]
+        data = await self._get_json("USDA", USDA_FOOD_URL.format(fdc_id=fdc), {"api_key": self._usda_key})
+        if not isinstance(data, dict):
+            raise SourceError("USDA food record was not an object")
+        measures = {"description": data.get("description"), **parse_usda_portions(data.get("foodPortions") or [], data.get("description"))}
+        if measures["portion_grams"]:
+            self._cache.set(key, [measures])
+        return measures
 
     # ---------- Open Food Facts ----------
 

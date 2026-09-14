@@ -29,7 +29,14 @@ from .ingredients import (
     parsed_ingredient_summary,
 )
 from .mealie import MealieClient, MealieError, plan_entry, recipe_full, recipe_summary, shopping_item
-from .nutrition import NUTRIENTS, encode_food_extras, estimate_recipe_nutrition, nutrition_patch, validate_per_100g
+from .nutrition import (
+    NUTRIENTS,
+    encode_food_extras,
+    estimate_recipe_nutrition,
+    nutrition_patch,
+    read_food_profile,
+    validate_per_100g,
+)
 from .nutrition_sources import NutritionSources, SourceError
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -503,10 +510,16 @@ async def set_food_nutrition(
     source_id: str | None = None,
     grams_per_ml: float | None = None,
     portion_grams: dict[str, float] | None = None,
+    fetch_measures: bool = True,
     items: list[dict[str, Any]] | None = None,
 ) -> dict[str, Any]:
     """Store nutrition data on a Mealie food so compute_recipe_nutrition can use it
     (kept in the food's extras, reused by every recipe using that food).
+
+    With source="usda" and its source_id, the same USDA record's household measures
+    are stored too (official weights for 1 cup, 1 tbsp, 1 large, 1 clove...), so
+    cups and pieces of this food convert to grams accurately. Values already on the
+    food or passed here win; fetch_measures=false skips it.
 
     per_100g: keys calories, protein_g, fat_g, saturated_fat_g, trans_fat_g,
       carbs_g, fiber_g, sugar_g, sodium_mg, cholesterol_mg -- omit unknowns.
@@ -520,12 +533,14 @@ async def set_food_nutrition(
     Pass any combination; at least one is required.
 
     items: batch several foods in one call -- a list of objects with the same keys
-    (food_id, per_100g, source, source_id, grams_per_ml, portion_grams). Runs in
+    (food_id, per_100g, source, source_id, grams_per_ml, portion_grams, fetch_measures). Runs in
     order; one failure doesn't stop the rest; reply lists results and errors."""
     if items is None:
         if food_id is None:
             raise ToolError("pass food_id (or items for a batch)")
-        return await _set_food_nutrition_one(food_id, per_100g, source, source_id, grams_per_ml, portion_grams)
+        return await _set_food_nutrition_one(
+            food_id, per_100g, source, source_id, grams_per_ml, portion_grams, fetch_measures
+        )
     if any(v is not None for v in (food_id, per_100g, source_id, grams_per_ml, portion_grams)):
         raise ToolError("pass either items (batch) or food_id and its values (single), not both")
     if not items:
@@ -549,6 +564,7 @@ async def set_food_nutrition(
                 item.get("source_id"),
                 item.get("grams_per_ml"),
                 item.get("portion_grams"),
+                bool(item.get("fetch_measures", fetch_measures)),
             )
             results.append({"index": i, **saved})
         except ToolError as e:
@@ -556,7 +572,7 @@ async def set_food_nutrition(
     return {"succeeded": len(results), "failed": len(errors), "results": results, "errors": errors}
 
 
-_NUTRITION_ITEM_KEYS = {"food_id", "per_100g", "source", "source_id", "grams_per_ml", "portion_grams"}
+_NUTRITION_ITEM_KEYS = {"food_id", "per_100g", "source", "source_id", "grams_per_ml", "portion_grams", "fetch_measures"}
 
 
 async def _set_food_nutrition_one(
@@ -566,6 +582,7 @@ async def _set_food_nutrition_one(
     source_id: str | None,
     grams_per_ml: Any,
     portion_grams: Any,
+    fetch_measures: bool = True,
 ) -> dict[str, Any]:
     if per_100g is None and grams_per_ml is None and portion_grams is None:
         raise ToolError("pass per_100g, grams_per_ml and/or portion_grams")
@@ -580,6 +597,35 @@ async def _set_food_nutrition_one(
         ):
             raise ValueError("grams_per_ml must be a number between 0 (removes it) and 25")
         current = await taxonomy.get_existing(mealie(), "foods", food_id, role="food_id")
+    except ValueError as e:
+        raise ToolError(str(e)) from e
+
+    measures_report: dict[str, Any] | None = None
+    if fetch_measures and source == "usda" and source_id:
+        existing = read_food_profile(current)
+        try:
+            measures = await nutrition().usda_household_measures(source_id)
+        except SourceError as e:
+            measures_report = {"warning": f"couldn't fetch USDA household measures: {e}"}
+        else:
+            explicit = {k for k in (portion_grams or {})}
+            added = {
+                k: v for k, v in measures["portion_grams"].items()
+                if k not in existing.portion_grams and k not in explicit
+            }
+            if added:
+                portion_grams = {**added, **(portion_grams or {})}
+            density_added = None
+            if grams_per_ml is None and existing.grams_per_ml is None and measures.get("grams_per_ml"):
+                grams_per_ml = density_added = measures["grams_per_ml"]
+            measures_report = {
+                "source": f"USDA FDC {source_id} ({measures.get('description')})",
+                "portion_grams_added": sorted(added),
+                "grams_per_ml_added": density_added,
+            }
+            if not measures["portion_grams"]:
+                measures_report["note"] = "USDA lists no household measures for this record"
+    try:
         current["extras"] = encode_food_extras(
             current.get("extras"),
             per_100g=clean,
@@ -591,7 +637,10 @@ async def _set_food_nutrition_one(
     except ValueError as e:
         raise ToolError(str(e)) from e
     saved = await mealie().put(f"/api/foods/{food_id}", current)
-    return taxonomy.taxonomy_item("foods", saved)
+    result = taxonomy.taxonomy_item("foods", saved)
+    if measures_report:
+        result["household_measures"] = measures_report
+    return result
 
 
 @mcp.tool(annotations=WRITE)
