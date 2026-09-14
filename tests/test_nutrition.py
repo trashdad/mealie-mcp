@@ -192,8 +192,9 @@ def test_rollup_partial_nutrient_data_is_unknown_not_zero():
 
 def test_rollup_skips_zero_quantity_and_flags_approximations():
     salt = food("salt", {"sodium_mg": 38758})
+    grain = food("mystery grain", {"calories": 350})  # nothing in the USDA reference table matches
     result = estimate_recipe_nutrition(
-        [ing(0, salt, None, note="to taste", display="salt to taste"), ing(1, RICE, unit("cup", 1, "cup"))],
+        [ing(0, salt, None, note="to taste", display="salt to taste"), ing(1, grain, unit("cup", 1, "cup"))],
         servings=1,
     )
     assert result["skipped"] == [{"ingredient": "salt to taste", "reason": "no quantity"}]

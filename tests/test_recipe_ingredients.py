@@ -55,12 +55,13 @@ async def test_review_reports_status_nutrition_and_step_usage(tools, fake, kitch
     assert [r["status"] for r in rows] == ["suspect", "linked", "unlinked", "unlinked"]
     assert "'lb'" in rows[0]["status_reason"]
     assert rows[0]["used_in_steps"] == [1] and rows[1]["used_in_steps"] == [2] and rows[3]["used_in_steps"] == []
-    assert rows[1]["nutrition"] == "cannot_weigh" and "clove" in rows[1]["nutrition_note"]
+    # garlic cloves: weighed from USDA's household measure (1 clove = 3 g)
+    assert rows[1]["nutrition"] == "ready" and "USDA household measure" in rows[1]["nutrition_note"]
     assert rows[0]["nutrition"] == "missing_data"
     assert rows[2]["nutrition"] == "not_linked"
     assert result["summary"] == {
         "total": 4, "suspect": 1, "linked": 1, "unlinked": 2,
-        "nutrition_missing_data": 1, "nutrition_cannot_weigh": 1, "nutrition_not_linked": 2,
+        "nutrition_missing_data": 1, "nutrition_ready": 1, "nutrition_not_linked": 2,
     }
     assert "suggestion" not in rows[0]
     assert not any(c[1] == "/api/parser/ingredients" for c in fake.calls)
@@ -68,8 +69,6 @@ async def test_review_reports_status_nutrition_and_step_usage(tools, fake, kitch
 
 async def test_review_needs_attention_filter(tools, fake, kitchen):
     call, _ = tools
-    garlic = kitchen["foods"]["garlic"]
-    garlic["extras"]["portion_grams"] = json.dumps({"clove": 5})
     result = await call("review_recipe_ingredients", slug="thigh-bowl", only="needs_attention", suggest=False)
     assert [r["position"] for r in result["ingredients"]] == [1, 3, 4]  # garlic is linked + weighable
     assert result["summary"]["total"] == 4

@@ -24,6 +24,7 @@ from .ingredients import (
     _singular,
     _STOPWORDS,
     assess_parse,
+    fold,
     build_parsed_ingredient,
     fetch_by_ids,
     normalize_text,
@@ -76,7 +77,7 @@ def _nutrition_state(ing: dict) -> tuple[str, str]:
     profile = read_food_profile(food)
     if not profile.per_100g:
         return "missing_data", f"food {food.get('name')!r} has no nutrition data (lookup_nutrition -> set_food_nutrition)"
-    conv = quantity_to_grams(float(quantity), ing.get("unit"), profile)
+    conv = quantity_to_grams(float(quantity), ing.get("unit"), profile, ing.get("note") or "", food.get("name"))
     if conv.grams is None:
         return "cannot_weigh", conv.note
     if conv.approximate:
@@ -133,7 +134,7 @@ def _summary(rows: list[dict]) -> dict[str, int]:
 
 
 def _ordered_words(text: str) -> list[str]:
-    return [w for w in (_singular(t) for t in re.findall(r"[a-z]+", text.lower())) if w not in _STOPWORDS]
+    return [w for w in (_singular(t) for t in re.findall(r"[a-z]+", fold(text))) if w not in _STOPWORDS]
 
 
 def _search_terms(name: str) -> list[str]:

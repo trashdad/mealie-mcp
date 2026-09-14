@@ -284,65 +284,92 @@ def _unit_names(unit: dict) -> list[str]:
     return [n for n in names if n]
 
 
-def _portion_for(profile: FoodProfile, unit_name: str) -> float | None:
-    """Portion weight for a unit name, tolerant of singular/plural on either side."""
-    key = normalize_unit_name(unit_name)
-    for candidate in (key, f"{key}s", f"{key}es", key[:-1] if key.endswith("s") else None, key[:-2] if key.endswith("es") else None):
-        if candidate and candidate in profile.portion_grams:
-            return profile.portion_grams[candidate]
-    return None
+def _portion_sources(profile: FoodProfile, food_name: str | None, note: str) -> list[tuple[dict[str, float], float | None, str]]:
+    """Where cup/spoon/piece weights can come from, most specific first."""
+    from .household_measures import match_reference
+
+    sources = []
+    if profile.portion_grams or profile.grams_per_ml is not None:
+        sources.append((profile.portion_grams, profile.grams_per_ml, "this food's measures"))
+    reference = match_reference(food_name, note)
+    if reference:
+        sources.append(
+            (
+                reference.get("portion_grams") or {},
+                reference.get("grams_per_ml"),
+                f"USDA household measure for {reference['usda_description']!r} (FDC {reference['usda_fdc_id']})",
+            )
+        )
+    return sources
 
 
-def _volume_to_grams(ml: float, profile: FoodProfile, how: str) -> Conversion:
-    if profile.grams_per_ml is not None:
-        return Conversion(ml * profile.grams_per_ml, False, f"{how}, food density {profile.grams_per_ml} g/ml")
-    return Conversion(
-        ml * WATER_GRAMS_PER_ML,
-        True,
-        f"{how}, assumed water density (set grams_per_ml on this food for accuracy)",
-    )
-
-
-def quantity_to_grams(quantity: float, unit: dict | None, profile: FoodProfile) -> Conversion:
+def quantity_to_grams(
+    quantity: float, unit: dict | None, profile: FoodProfile, note: str = "", food_name: str | None = None
+) -> Conversion:
     """Convert an ingredient amount to grams, most specific source first:
-    1. the food's own portion_grams for this unit ("clove" of garlic, "cup" of flour, "each" egg)
-    2. the unit's Mealie standardQuantity/standardUnit
-    3. a built-in table of common mass/volume unit names
-    Volume goes through the food's grams_per_ml, else water density (flagged approximate)."""
+    1. cup/spoon/piece weights -- this food's own (portion_grams, e.g. from its USDA
+       record), then USDA's household measures for a matching common ingredient.
+       A prep word in the note picks a variant ("packed" brown sugar, "chopped"
+       onion); a size word picks a piece ("large" egg).
+    2. mass units (exact), from the unit's Mealie standard or its name
+    3. volume units, via density from the same sources as 1; water only as a last
+       resort (flagged approximate)."""
+    from .household_measures import portion_for_piece, portion_for_unit
+
+    sources = _portion_sources(profile, food_name, note)
     if not unit:
-        each = profile.portion_grams.get(PORTION_EACH)
-        if each is not None:
-            return Conversion(quantity * each, False, f"no unit, food portion 'each' = {each} g")
-        return Conversion(None, note="no unit and no portion_grams['each'] weight set on this food")
+        for portions, _, label in sources:
+            hit = portion_for_piece(portions, note)
+            if hit:
+                key, grams = hit
+                return Conversion(quantity * grams, False, f"1 {key.replace('_', ' ')} = {grams:g} g ({label})")
+        return Conversion(
+            None,
+            note="no unit and no known weight for one of this item: set portion_grams['each'] on this food",
+        )
 
     names = _unit_names(unit)
-    for name in names:
-        grams = _portion_for(profile, name)
-        if grams is not None:
-            return Conversion(quantity * grams, False, f"food portion '{name}' = {grams} g")
-
+    ml, how = None, ""
     std_qty, std_unit = _as_number(unit.get("standardQuantity")), unit.get("standardUnit")
     if std_qty and std_qty > 0 and std_unit:
         mass = _lookup_unit_table(std_unit, MASS_GRAMS)
         if mass is not None:
-            return Conversion(quantity * std_qty * mass, False, f"unit standard {std_qty} {std_unit}")
+            return Conversion(quantity * std_qty * mass, False, f"unit standard {std_qty:g} {std_unit}")
         vol = _lookup_unit_table(std_unit, VOLUME_ML)
         if vol is not None:
-            return _volume_to_grams(quantity * std_qty * vol, profile, f"unit standard {std_qty} {std_unit}")
+            ml, how = quantity * std_qty * vol, f"unit standard {std_qty:g} {std_unit}"
+    if ml is None:
+        for name in names:
+            mass = _lookup_unit_table(name, MASS_GRAMS)
+            if mass is not None:
+                return Conversion(quantity * mass, False, f"'{name}' as a mass unit")
+            vol = _lookup_unit_table(name, VOLUME_ML)
+            if vol is not None:
+                ml, how = quantity * vol, f"'{name}' as a volume unit"
+                break
 
-    for name in names:
-        mass = _lookup_unit_table(name, MASS_GRAMS)
-        if mass is not None:
-            return Conversion(quantity * mass, False, f"'{name}' as a mass unit")
-        vol = _lookup_unit_table(name, VOLUME_ML)
-        if vol is not None:
-            return _volume_to_grams(quantity * vol, profile, f"'{name}' as a volume unit")
+    # Food-specific data beats the generic reference: this food's weight for the
+    # unit, then its density, then the same two from the USDA reference table.
+    for portions, density, label in sources:
+        hit = portion_for_unit(portions, names, note)
+        if hit:
+            key, grams = hit
+            return Conversion(quantity * grams, False, f"1 {key.replace('_', ' ')} = {grams:g} g ({label})")
+        if ml is not None and density:
+            return Conversion(ml * density, False, f"{how}, {density:.3g} g/ml ({label})")
+
+    if ml is not None:
+        return Conversion(
+            ml * WATER_GRAMS_PER_ML,
+            True,
+            f"{how}, assumed water density -- no measures known for this food (set grams_per_ml on it)",
+        )
 
     label = unit.get("name") or "?"
     return Conversion(
         None,
         note=(
-            f"unit {label!r} has no known weight: set the unit's standardQuantity/standardUnit, "
+            f"unit {label!r} has no known weight for this food: set the unit's standardQuantity/standardUnit, "
             f"or portion_grams[{normalize_unit_name(label)!r}] on this food"
         ),
     )
@@ -414,7 +441,7 @@ def estimate_recipe_nutrition(ingredients: list[dict], servings: float | None) -
             unaccounted.append({"ingredient": label, "reason": f"food {food.get('name')!r} has no nutrition data"})
             continue
 
-        conv = quantity_to_grams(quantity, ing.get("unit"), profile)
+        conv = quantity_to_grams(quantity, ing.get("unit"), profile, ing.get("note") or "", food.get("name"))
         if conv.grams is None:
             unaccounted.append({"ingredient": label, "reason": conv.note})
             continue

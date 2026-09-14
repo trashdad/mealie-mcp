@@ -24,8 +24,11 @@ os.environ.update(
 
 from fake_mealie import FakeMealie  # noqa: E402
 
+import httpx  # noqa: E402
+
 from mealie_sous_chef import server  # noqa: E402
 from mealie_sous_chef.mealie import MealieClient  # noqa: E402
+from mealie_sous_chef.nutrition_sources import NutritionSources  # noqa: E402
 
 
 @pytest.fixture
@@ -40,11 +43,33 @@ async def client(fake: FakeMealie):
     await c.aclose()
 
 
+class FakeUSDA:
+    """USDA food-detail records by FDC id (household measures only)."""
+
+    def __init__(self):
+        self.foods: dict[str, dict] = {}
+        self.requests: list[httpx.Request] = []
+
+    def handler(self, request: httpx.Request) -> httpx.Response:
+        self.requests.append(request)
+        fdc = request.url.path.rsplit("/", 1)[-1]
+        if request.url.host == "api.nal.usda.gov" and fdc in self.foods:
+            return httpx.Response(200, json=self.foods[fdc])
+        return httpx.Response(404)
+
+
 @pytest.fixture
-async def tools(client: MealieClient, monkeypatch):
+def usda() -> FakeUSDA:
+    return FakeUSDA()
+
+
+@pytest.fixture
+async def tools(client: MealieClient, usda: FakeUSDA, monkeypatch, tmp_path):
     """Call MCP tools the way Claude does (argument validation, error wrapping
     included), against the fake Mealie. Returns (call, call_error)."""
     monkeypatch.setattr(server, "_mealie", client)
+    sources = NutritionSources(str(tmp_path), "key", transport=httpx.MockTransport(usda.handler))
+    monkeypatch.setattr(server, "_nutrition", sources)
 
     async def call(tool: str, /, **arguments):
         result = await server.mcp.call_tool(tool, arguments)

@@ -1,0 +1,1759 @@
+{
+ "source": "USDA FoodData Central household measures (SR Legacy / FNDDS), public domain",
+ "generated_by": "scripts/build_household_measures.py",
+ "entries": [
+  {
+   "names": [
+    "flour",
+    "all-purpose flour",
+    "white flour",
+    "plain flour"
+   ],
+   "usda_fdc_id": 168894,
+   "usda_description": "Wheat flour, white, all-purpose, enriched, bleached",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 125.0
+   },
+   "grams_per_ml": 0.5283
+  },
+  {
+   "names": [
+    "bread flour"
+   ],
+   "usda_fdc_id": 168896,
+   "usda_description": "Wheat flour, white, bread, enriched",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 137.0
+   },
+   "grams_per_ml": 0.5791
+  },
+  {
+   "names": [
+    "cake flour"
+   ],
+   "usda_fdc_id": 169723,
+   "usda_description": "Wheat flour, white, cake, enriched",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 137.0,
+    "cup_unsifted_dipped": 137.0
+   },
+   "grams_per_ml": 0.5791
+  },
+  {
+   "names": [
+    "whole wheat flour"
+   ],
+   "usda_fdc_id": 168893,
+   "usda_description": "Wheat flour, whole-grain (Includes foods for USDA's Food Distribution Program)",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 120.0
+   },
+   "grams_per_ml": 0.5072
+  },
+  {
+   "names": [
+    "almond flour",
+    "almond meal"
+   ],
+   "usda_fdc_id": 170568,
+   "usda_description": "Nuts, almonds, blanched",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 145.0,
+    "cup_whole_kernels": 145.0,
+    "tablespoon": 9.1
+   },
+   "grams_per_ml": 0.6129
+  },
+  {
+   "names": [
+    "cornmeal"
+   ],
+   "usda_fdc_id": 169697,
+   "usda_description": "Cornmeal, whole-grain, yellow",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 122.0
+   },
+   "grams_per_ml": 0.5157
+  },
+  {
+   "names": [
+    "cornstarch",
+    "corn starch"
+   ],
+   "usda_fdc_id": 169698,
+   "usda_description": "Cornstarch",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 128.0
+   },
+   "grams_per_ml": 0.541
+  },
+  {
+   "names": [
+    "rolled oats",
+    "oats",
+    "oatmeal"
+   ],
+   "usda_fdc_id": 173904,
+   "usda_description": "Cereals, oats, regular and quick, not fortified, dry",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 81.0
+   },
+   "grams_per_ml": 0.3424
+  },
+  {
+   "names": [
+    "white rice",
+    "rice",
+    "jasmine rice",
+    "basmati rice",
+    "long grain rice"
+   ],
+   "usda_fdc_id": 168877,
+   "usda_description": "Rice, white, long-grain, regular, raw, enriched",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 185.0
+   },
+   "grams_per_ml": 0.7819
+  },
+  {
+   "names": [
+    "cooked white rice",
+    "cooked rice",
+    "cooked jasmine rice",
+    "cooked basmati rice"
+   ],
+   "usda_fdc_id": 168878,
+   "usda_description": "Rice, white, long-grain, regular, enriched, cooked",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 158.0
+   },
+   "grams_per_ml": 0.6678
+  },
+  {
+   "names": [
+    "brown rice"
+   ],
+   "usda_fdc_id": 169703,
+   "usda_description": "Rice, brown, long-grain, raw (Includes foods for USDA's Food Distribution Program)",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 185.0
+   },
+   "grams_per_ml": 0.7819
+  },
+  {
+   "names": [
+    "cooked brown rice"
+   ],
+   "usda_fdc_id": 169704,
+   "usda_description": "Rice, brown, long-grain, cooked (Includes foods for USDA's Food Distribution Program)",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 202.0
+   },
+   "grams_per_ml": 0.8538
+  },
+  {
+   "names": [
+    "quinoa"
+   ],
+   "usda_fdc_id": 168874,
+   "usda_description": "Quinoa, uncooked",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 170.0
+   },
+   "grams_per_ml": 0.7185
+  },
+  {
+   "names": [
+    "cooked quinoa"
+   ],
+   "usda_fdc_id": 168917,
+   "usda_description": "Quinoa, cooked",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 185.0
+   },
+   "grams_per_ml": 0.7819
+  },
+  {
+   "names": [
+    "lentils",
+    "red lentils",
+    "green lentils"
+   ],
+   "usda_fdc_id": 172420,
+   "usda_description": "Lentils, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "tablespoon": 12.0,
+    "cup": 192.0
+   },
+   "grams_per_ml": 0.8115
+  },
+  {
+   "names": [
+    "breadcrumbs",
+    "bread crumbs"
+   ],
+   "usda_fdc_id": 174928,
+   "usda_description": "Bread, crumbs, dry, grated, plain",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 108.0
+   },
+   "grams_per_ml": 0.4565
+  },
+  {
+   "names": [
+    "panko"
+   ],
+   "usda_fdc_id": 174928,
+   "usda_description": "Bread, crumbs, dry, grated, plain",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 108.0
+   },
+   "grams_per_ml": 0.4565
+  },
+  {
+   "names": [
+    "couscous"
+   ],
+   "usda_fdc_id": 169699,
+   "usda_description": "Couscous, dry",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 173.0
+   },
+   "grams_per_ml": 0.7312
+  },
+  {
+   "names": [
+    "sugar",
+    "granulated sugar",
+    "white sugar",
+    "cane sugar"
+   ],
+   "usda_fdc_id": 169655,
+   "usda_description": "Sugars, granulated",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 200.0,
+    "teaspoon": 4.2
+   },
+   "grams_per_ml": 0.8454
+  },
+  {
+   "names": [
+    "brown sugar",
+    "light brown sugar",
+    "dark brown sugar"
+   ],
+   "usda_fdc_id": 168833,
+   "usda_description": "Sugars, brown",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 220.0,
+    "cup_packed": 220.0,
+    "teaspoon": 4.6,
+    "teaspoon_packed": 4.6,
+    "cup_unpacked": 145.0,
+    "teaspoon_unpacked": 3.0,
+    "teaspoon_brownulated": 3.2
+   },
+   "grams_per_ml": 0.9299
+  },
+  {
+   "names": [
+    "powdered sugar",
+    "confectioners sugar",
+    "icing sugar"
+   ],
+   "usda_fdc_id": 169656,
+   "usda_description": "Sugars, powdered",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 100.0,
+    "cup_sifted": 100.0,
+    "teaspoon": 2.5,
+    "tablespoon": 8.0,
+    "tablespoon_unsifted": 8.0,
+    "cup_unsifted": 120.0
+   },
+   "grams_per_ml": 0.4227
+  },
+  {
+   "names": [
+    "honey"
+   ],
+   "usda_fdc_id": 169640,
+   "usda_description": "Honey",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 339.0,
+    "tablespoon": 21.0,
+    "packet": 14.0
+   },
+   "grams_per_ml": 1.4329
+  },
+  {
+   "names": [
+    "maple syrup"
+   ],
+   "usda_fdc_id": 169661,
+   "usda_description": "Syrups, maple",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "tablespoon": 20.0,
+    "cup": 315.0
+   },
+   "grams_per_ml": 1.3314
+  },
+  {
+   "names": [
+    "molasses"
+   ],
+   "usda_fdc_id": 168820,
+   "usda_description": "Molasses",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 337.0
+   },
+   "grams_per_ml": 1.4244
+  },
+  {
+   "names": [
+    "corn syrup"
+   ],
+   "usda_fdc_id": 168837,
+   "usda_description": "Syrups, corn, light",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "tablespoon": 22.0,
+    "cup": 341.0
+   },
+   "grams_per_ml": 1.4413
+  },
+  {
+   "names": [
+    "olive oil",
+    "extra virgin olive oil",
+    "extra-virgin olive oil"
+   ],
+   "usda_fdc_id": 171413,
+   "usda_description": "Oil, olive, salad or cooking",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "tablespoon": 13.5,
+    "teaspoon": 4.5,
+    "cup": 216.0
+   },
+   "grams_per_ml": 0.913
+  },
+  {
+   "names": [
+    "vegetable oil",
+    "canola oil",
+    "oil",
+    "cooking oil"
+   ],
+   "usda_fdc_id": 172336,
+   "usda_description": "Oil, canola",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "teaspoon": 4.5,
+    "cup": 218.0,
+    "tablespoon": 14.0
+   },
+   "grams_per_ml": 0.9214
+  },
+  {
+   "names": [
+    "coconut oil"
+   ],
+   "usda_fdc_id": 171412,
+   "usda_description": "Oil, coconut",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 218.0,
+    "teaspoon": 4.5,
+    "tablespoon": 13.6
+   },
+   "grams_per_ml": 0.9214
+  },
+  {
+   "names": [
+    "sesame oil"
+   ],
+   "usda_fdc_id": 171016,
+   "usda_description": "Oil, sesame, salad or cooking",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "tablespoon": 13.6,
+    "teaspoon": 4.5,
+    "cup": 218.0
+   },
+   "grams_per_ml": 0.9214
+  },
+  {
+   "names": [
+    "butter",
+    "unsalted butter",
+    "salted butter"
+   ],
+   "usda_fdc_id": 173410,
+   "usda_description": "Butter, salted",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "pat": 5.0,
+    "stick": 113.0,
+    "cup": 227.0,
+    "tablespoon": 14.2
+   },
+   "grams_per_ml": 0.9595
+  },
+  {
+   "names": [
+    "milk",
+    "whole milk"
+   ],
+   "usda_fdc_id": 171265,
+   "usda_description": "Milk, whole, 3.25% milkfat, with added vitamin D",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "fluid_ounce": 30.5,
+    "cup": 244.0,
+    "tablespoon": 15.0,
+    "quart": 976.0
+   },
+   "grams_per_ml": 1.0313
+  },
+  {
+   "names": [
+    "heavy cream",
+    "heavy whipping cream",
+    "whipping cream"
+   ],
+   "usda_fdc_id": 170859,
+   "usda_description": "Cream, fluid, heavy whipping",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 120.0,
+    "cup_whipped": 120.0,
+    "cup_fluid": 238.0,
+    "tablespoon": 15.0,
+    "fluid_ounce": 29.8
+   },
+   "grams_per_ml": 0.5072
+  },
+  {
+   "names": [
+    "half and half"
+   ],
+   "usda_fdc_id": 171255,
+   "usda_description": "Cream, fluid, half and half",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "tablespoon": 15.0,
+    "cup": 242.0,
+    "fluid_ounce": 30.2
+   },
+   "grams_per_ml": 1.0229
+  },
+  {
+   "names": [
+    "sour cream"
+   ],
+   "usda_fdc_id": 171257,
+   "usda_description": "Cream, sour, cultured",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "tablespoon": 12.0,
+    "cup": 230.0
+   },
+   "grams_per_ml": 0.9722
+  },
+  {
+   "names": [
+    "greek yogurt"
+   ],
+   "usda_fdc_id": 2705422,
+   "usda_description": "Yogurt, Greek, whole milk, plain",
+   "usda_data_type": "Survey (FNDDS)",
+   "portion_grams": {
+    "cup": 245.0
+   },
+   "grams_per_ml": 1.0356
+  },
+  {
+   "names": [
+    "yogurt",
+    "plain yogurt"
+   ],
+   "usda_fdc_id": 171284,
+   "usda_description": "Yogurt, plain, whole milk",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 245.0
+   },
+   "grams_per_ml": 1.0356
+  },
+  {
+   "names": [
+    "cream cheese"
+   ],
+   "usda_fdc_id": 173418,
+   "usda_description": "Cheese, cream",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cubic": 16.0,
+    "cubic_inch": 16.0,
+    "cup": 232.0,
+    "tablespoon": 10.0,
+    "tablespoon_whipped": 10.0
+   },
+   "grams_per_ml": 0.9806
+  },
+  {
+   "names": [
+    "cottage cheese"
+   ],
+   "usda_fdc_id": 172179,
+   "usda_description": "Cheese, cottage, creamed, large or small curd",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 210.0,
+    "cup_curd": 210.0
+   },
+   "grams_per_ml": 0.8876
+  },
+  {
+   "names": [
+    "cheddar",
+    "cheddar cheese",
+    "shredded cheddar"
+   ],
+   "usda_fdc_id": 2705709,
+   "usda_description": "Cheese, Cheddar",
+   "usda_data_type": "Survey (FNDDS)",
+   "portion_grams": {
+    "slice": 21.0,
+    "cup": 132.0,
+    "cup_diced": 132.0,
+    "cup_shredded": 113.0,
+    "cup_nfs": 113.0,
+    "cup_melted": 244.0,
+    "cup_cubed": 132.0,
+    "cracker": 9.0,
+    "cracker_size_slice": 9.0,
+    "stick": 28.35,
+    "cubic": 17.0,
+    "cubic_inch": 17.0
+   },
+   "grams_per_ml": 0.5579
+  },
+  {
+   "names": [
+    "mozzarella",
+    "mozzarella cheese",
+    "shredded mozzarella"
+   ],
+   "usda_fdc_id": 170845,
+   "usda_description": "Cheese, mozzarella, whole milk",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 112.0,
+    "cup_shredded": 112.0,
+    "slice": 28.333
+   },
+   "grams_per_ml": 0.4734
+  },
+  {
+   "names": [
+    "parmesan",
+    "parmesan cheese",
+    "grated parmesan"
+   ],
+   "usda_fdc_id": 171247,
+   "usda_description": "Cheese, parmesan, grated",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 100.0,
+    "tablespoon": 5.0
+   },
+   "grams_per_ml": 0.4227
+  },
+  {
+   "names": [
+    "coconut milk",
+    "light coconut milk",
+    "canned coconut milk"
+   ],
+   "usda_fdc_id": 170173,
+   "usda_description": "Nuts, coconut milk, canned (liquid expressed from grated meat and water)",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 226.0,
+    "tablespoon": 15.0
+   },
+   "grams_per_ml": 0.9552
+  },
+  {
+   "names": [
+    "cocoa powder",
+    "cocoa",
+    "unsweetened cocoa powder"
+   ],
+   "usda_fdc_id": 169593,
+   "usda_description": "Cocoa, dry powder, unsweetened",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "tablespoon": 5.4,
+    "cup": 86.0
+   },
+   "grams_per_ml": 0.3635
+  },
+  {
+   "names": [
+    "chocolate chips",
+    "semisweet chocolate chips"
+   ],
+   "usda_fdc_id": 167976,
+   "usda_description": "Candies, semisweet chocolate",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 173.0,
+    "cup_mini_chips": 173.0,
+    "cup_chips": 168.0
+   },
+   "grams_per_ml": 0.7312
+  },
+  {
+   "names": [
+    "baking soda"
+   ],
+   "usda_fdc_id": 175040,
+   "usda_description": "Leavening agents, baking soda",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "teaspoon": 4.6
+   },
+   "grams_per_ml": 0.9333
+  },
+  {
+   "names": [
+    "baking powder"
+   ],
+   "usda_fdc_id": 172804,
+   "usda_description": "Leavening agents, baking powder, double-acting, straight phosphate",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "teaspoon": 4.6
+   },
+   "grams_per_ml": 0.9333
+  },
+  {
+   "names": [
+    "salt",
+    "table salt",
+    "sea salt",
+    "kosher salt"
+   ],
+   "usda_fdc_id": 173468,
+   "usda_description": "Salt, table",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 292.0,
+    "teaspoon": 6.0,
+    "tablespoon": 18.0,
+    "dash": 0.4
+   },
+   "grams_per_ml": 1.2342
+  },
+  {
+   "names": [
+    "black pepper",
+    "pepper",
+    "ground black pepper"
+   ],
+   "usda_fdc_id": 170931,
+   "usda_description": "Spices, pepper, black",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "tablespoon": 6.9,
+    "tablespoon_ground": 6.9,
+    "dash": 0.1,
+    "teaspoon": 2.3,
+    "teaspoon_ground": 2.3,
+    "teaspoon_whole": 2.9
+   },
+   "grams_per_ml": 0.4666
+  },
+  {
+   "names": [
+    "cinnamon",
+    "ground cinnamon"
+   ],
+   "usda_fdc_id": 171320,
+   "usda_description": "Spices, cinnamon, ground",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "teaspoon": 2.6,
+    "tablespoon": 7.8
+   },
+   "grams_per_ml": 0.5275
+  },
+  {
+   "names": [
+    "paprika",
+    "smoked paprika"
+   ],
+   "usda_fdc_id": 171329,
+   "usda_description": "Spices, paprika",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "tablespoon": 6.8,
+    "teaspoon": 2.3
+   },
+   "grams_per_ml": 0.4599
+  },
+  {
+   "names": [
+    "cumin",
+    "ground cumin"
+   ],
+   "usda_fdc_id": 170923,
+   "usda_description": "Spices, cumin seed",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "teaspoon": 2.1,
+    "teaspoon_whole": 2.1,
+    "tablespoon": 6.0,
+    "tablespoon_whole": 6.0
+   },
+   "grams_per_ml": 0.4058
+  },
+  {
+   "names": [
+    "chili powder"
+   ],
+   "usda_fdc_id": 171319,
+   "usda_description": "Spices, chili powder",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "tablespoon": 8.0,
+    "teaspoon": 2.7
+   },
+   "grams_per_ml": 0.541
+  },
+  {
+   "names": [
+    "garlic powder"
+   ],
+   "usda_fdc_id": 171325,
+   "usda_description": "Spices, garlic powder",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "tablespoon": 9.7,
+    "teaspoon": 3.1
+   },
+   "grams_per_ml": 0.656
+  },
+  {
+   "names": [
+    "onion powder"
+   ],
+   "usda_fdc_id": 171327,
+   "usda_description": "Spices, onion powder",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "tablespoon": 6.9,
+    "teaspoon": 2.4
+   },
+   "grams_per_ml": 0.4666
+  },
+  {
+   "names": [
+    "oregano",
+    "dried oregano"
+   ],
+   "usda_fdc_id": 171328,
+   "usda_description": "Spices, oregano, dried",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "teaspoon": 1.0,
+    "teaspoon_leaves": 1.0,
+    "teaspoon_ground": 1.8
+   },
+   "grams_per_ml": 0.2029
+  },
+  {
+   "names": [
+    "basil",
+    "dried basil"
+   ],
+   "usda_fdc_id": 171317,
+   "usda_description": "Spices, basil, dried",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "tablespoon": 2.1,
+    "tablespoon_leaves": 2.1,
+    "teaspoon": 0.7,
+    "teaspoon_leaves": 0.7,
+    "tablespoon_ground": 4.5,
+    "teaspoon_ground": 1.4
+   },
+   "grams_per_ml": 0.142
+  },
+  {
+   "names": [
+    "thyme",
+    "dried thyme"
+   ],
+   "usda_fdc_id": 170938,
+   "usda_description": "Spices, thyme, dried",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "teaspoon": 1.0,
+    "teaspoon_leaves": 1.0,
+    "tablespoon": 4.3,
+    "tablespoon_ground": 4.3,
+    "tablespoon_leaves": 2.7,
+    "teaspoon_ground": 1.4
+   },
+   "grams_per_ml": 0.2908
+  },
+  {
+   "names": [
+    "ginger",
+    "ground ginger"
+   ],
+   "usda_fdc_id": 170926,
+   "usda_description": "Spices, ginger, ground",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "tablespoon": 5.2,
+    "teaspoon": 1.8
+   },
+   "grams_per_ml": 0.3517
+  },
+  {
+   "names": [
+    "turmeric",
+    "ground turmeric"
+   ],
+   "usda_fdc_id": 172231,
+   "usda_description": "Spices, turmeric, ground",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "teaspoon": 3.0,
+    "tablespoon": 9.4
+   },
+   "grams_per_ml": 0.6357
+  },
+  {
+   "names": [
+    "vanilla extract",
+    "vanilla"
+   ],
+   "usda_fdc_id": 173471,
+   "usda_description": "Vanilla extract",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "teaspoon": 4.2,
+    "cup": 208.0,
+    "tablespoon": 13.0
+   },
+   "grams_per_ml": 0.8792
+  },
+  {
+   "names": [
+    "soy sauce"
+   ],
+   "usda_fdc_id": 174277,
+   "usda_description": "Soy sauce made from soy and wheat (shoyu)",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "individual": 8.9,
+    "individual_packet": 8.9,
+    "tablespoon": 16.0,
+    "teaspoon": 5.3,
+    "cup": 255.0
+   },
+   "grams_per_ml": 1.0778
+  },
+  {
+   "names": [
+    "vinegar",
+    "white vinegar",
+    "apple cider vinegar"
+   ],
+   "usda_fdc_id": 172237,
+   "usda_description": "Vinegar, distilled",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "tablespoon": 14.9,
+    "teaspoon": 5.0,
+    "cup": 238.0
+   },
+   "grams_per_ml": 1.006
+  },
+  {
+   "names": [
+    "ketchup"
+   ],
+   "usda_fdc_id": 168556,
+   "usda_description": "Catsup",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "packet": 9.0,
+    "tablespoon": 17.0,
+    "cup": 240.0
+   },
+   "grams_per_ml": 1.0144
+  },
+  {
+   "names": [
+    "mayonnaise",
+    "mayo"
+   ],
+   "usda_fdc_id": 171009,
+   "usda_description": "Salad dressing, mayonnaise, regular",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "tablespoon": 13.8,
+    "cup": 220.0,
+    "packet": 10.0
+   },
+   "grams_per_ml": 0.9299
+  },
+  {
+   "names": [
+    "mustard",
+    "yellow mustard",
+    "dijon mustard"
+   ],
+   "usda_fdc_id": 172234,
+   "usda_description": "Mustard, prepared, yellow",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 249.0
+   },
+   "grams_per_ml": 1.0525
+  },
+  {
+   "names": [
+    "peanut butter"
+   ],
+   "usda_fdc_id": 172470,
+   "usda_description": "Peanut butter, smooth style, without salt",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 258.0,
+    "tablespoon": 16.0
+   },
+   "grams_per_ml": 1.0905
+  },
+  {
+   "names": [
+    "tomato paste"
+   ],
+   "usda_fdc_id": 170459,
+   "usda_description": "Tomato products, canned, paste, without salt added (Includes foods for USDA's Food Distribution Program)",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "can": 170.0,
+    "tablespoon": 16.0,
+    "cup": 264.0
+   },
+   "grams_per_ml": 1.1159
+  },
+  {
+   "names": [
+    "tomato sauce"
+   ],
+   "usda_fdc_id": 170054,
+   "usda_description": "Tomato products, canned, sauce",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 245.0
+   },
+   "grams_per_ml": 1.0356
+  },
+  {
+   "names": [
+    "diced tomatoes",
+    "canned tomatoes",
+    "crushed tomatoes"
+   ],
+   "usda_fdc_id": 170051,
+   "usda_description": "Tomatoes, red, ripe, canned, packed in tomato juice",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 240.0,
+    "medium": 111.0,
+    "large": 164.0,
+    "small": 82.0,
+    "can": 190.0,
+    "tablespoon": 15.0,
+    "each": 111.0
+   },
+   "grams_per_ml": 1.0144
+  },
+  {
+   "names": [
+    "salsa"
+   ],
+   "usda_fdc_id": 174524,
+   "usda_description": "Sauce, salsa, ready-to-serve",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "tablespoon": 18.0,
+    "cup": 259.0
+   },
+   "grams_per_ml": 1.0947
+  },
+  {
+   "names": [
+    "chicken broth",
+    "chicken stock",
+    "broth",
+    "stock"
+   ],
+   "usda_fdc_id": 174536,
+   "usda_description": "Soup, chicken broth, ready-to-serve",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 249.0
+   },
+   "grams_per_ml": 1.0525
+  },
+  {
+   "names": [
+    "water"
+   ],
+   "usda_fdc_id": 173647,
+   "usda_description": "Beverages, water, tap, drinking",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "liter": 1000.0,
+    "fluid_ounce": 29.6
+   },
+   "grams_per_ml": 1.0009
+  },
+  {
+   "names": [
+    "almonds"
+   ],
+   "usda_fdc_id": 170567,
+   "usda_description": "Nuts, almonds",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "almond": 1.2,
+    "cup": 143.0,
+    "cup_whole": 143.0,
+    "cup_slivered": 108.0,
+    "cup_ground": 95.0,
+    "cup_sliced": 92.0,
+    "each": 1.2
+   },
+   "grams_per_ml": 0.6044
+  },
+  {
+   "names": [
+    "walnuts"
+   ],
+   "usda_fdc_id": 170187,
+   "usda_description": "Nuts, walnuts, english",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 80.0,
+    "cup_ground": 80.0,
+    "cup_chopped": 117.0,
+    "cup_in_shell_edible": 28.0,
+    "cup_shelled": 100.0
+   },
+   "grams_per_ml": 0.3381
+  },
+  {
+   "names": [
+    "peanuts"
+   ],
+   "usda_fdc_id": 172430,
+   "usda_description": "Peanuts, all types, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 146.0
+   },
+   "grams_per_ml": 0.6171
+  },
+  {
+   "names": [
+    "raisins"
+   ],
+   "usda_fdc_id": 168165,
+   "usda_description": "Raisins, dark, seedless (Includes foods for USDA's Food Distribution Program)",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "miniature": 14.0,
+    "miniature_box": 14.0,
+    "small": 43.0,
+    "small_box": 43.0,
+    "raisin": 0.52,
+    "cup": 145.0,
+    "cup_packed": 165.0,
+    "each": 43.0
+   },
+   "grams_per_ml": 0.6129
+  },
+  {
+   "names": [
+    "shredded coconut",
+    "coconut flakes"
+   ],
+   "usda_fdc_id": 168586,
+   "usda_description": "Nuts, coconut meat, dried (desiccated), sweetened, shredded",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 93.0,
+    "cup_shredded": 93.0
+   },
+   "grams_per_ml": 0.3931
+  },
+  {
+   "names": [
+    "onion",
+    "yellow onion",
+    "white onion"
+   ],
+   "usda_fdc_id": 170000,
+   "usda_description": "Onions, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 160.0,
+    "cup_chopped": 160.0,
+    "slice": 14.0,
+    "medium": 110.0,
+    "large": 150.0,
+    "ring": 6.0,
+    "tablespoon": 10.0,
+    "tablespoon_chopped": 10.0,
+    "cup_sliced": 115.0,
+    "slice_thin": 9.0,
+    "small": 70.0,
+    "each": 110.0
+   },
+   "grams_per_ml": 0.6763
+  },
+  {
+   "names": [
+    "red onion"
+   ],
+   "usda_fdc_id": 170000,
+   "usda_description": "Onions, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 160.0,
+    "cup_chopped": 160.0,
+    "slice": 14.0,
+    "medium": 110.0,
+    "large": 150.0,
+    "ring": 6.0,
+    "tablespoon": 10.0,
+    "tablespoon_chopped": 10.0,
+    "cup_sliced": 115.0,
+    "slice_thin": 9.0,
+    "small": 70.0,
+    "each": 110.0
+   },
+   "grams_per_ml": 0.6763
+  },
+  {
+   "names": [
+    "green onion",
+    "scallion",
+    "spring onion"
+   ],
+   "usda_fdc_id": 170005,
+   "usda_description": "Onions, spring or scallions (includes tops and bulb), raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "small": 5.0,
+    "tablespoon": 6.0,
+    "tablespoon_chopped": 6.0,
+    "cup": 100.0,
+    "cup_chopped": 100.0,
+    "medium": 15.0,
+    "large": 25.0,
+    "each": 15.0
+   },
+   "grams_per_ml": 0.4227
+  },
+  {
+   "names": [
+    "garlic"
+   ],
+   "usda_fdc_id": 169230,
+   "usda_description": "Garlic, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "teaspoon": 2.8,
+    "clove": 3.0,
+    "cup": 136.0
+   },
+   "grams_per_ml": 0.5748
+  },
+  {
+   "names": [
+    "carrot",
+    "carrots"
+   ],
+   "usda_fdc_id": 170393,
+   "usda_description": "Carrots, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 110.0,
+    "cup_grated": 110.0,
+    "slice": 3.0,
+    "strip": 7.0,
+    "small": 50.0,
+    "medium": 61.0,
+    "large": 72.0,
+    "cup_chopped": 128.0,
+    "each": 61.0
+   },
+   "grams_per_ml": 0.4649
+  },
+  {
+   "names": [
+    "celery"
+   ],
+   "usda_fdc_id": 169988,
+   "usda_description": "Celery, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "tablespoon": 7.5,
+    "stalk": 40.0,
+    "cup": 101.0,
+    "cup_chopped": 101.0,
+    "strip": 4.0,
+    "each": 40.0
+   },
+   "grams_per_ml": 0.4269
+  },
+  {
+   "names": [
+    "bell pepper",
+    "red bell pepper",
+    "green bell pepper",
+    "red pepper",
+    "green pepper",
+    "yellow pepper",
+    "sweet pepper"
+   ],
+   "usda_fdc_id": 170108,
+   "usda_description": "Peppers, sweet, red, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "large": 164.0,
+    "tablespoon": 9.3,
+    "cup": 92.0,
+    "cup_sliced": 92.0,
+    "cup_chopped": 149.0,
+    "ring": 10.0,
+    "medium": 119.0,
+    "small": 74.0,
+    "each": 119.0
+   },
+   "grams_per_ml": 0.3889
+  },
+  {
+   "names": [
+    "jalapeno",
+    "jalapeno pepper",
+    "jalapenos"
+   ],
+   "usda_fdc_id": 168576,
+   "usda_description": "Peppers, jalapeno, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "pepper": 14.0,
+    "cup": 90.0,
+    "cup_sliced": 90.0,
+    "each": 14.0
+   },
+   "grams_per_ml": 0.3804
+  },
+  {
+   "names": [
+    "tomato",
+    "tomatoes"
+   ],
+   "usda_fdc_id": 170457,
+   "usda_description": "Tomatoes, red, ripe, raw, year round average",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "medium": 123.0,
+    "medium_whole": 123.0,
+    "slice": 20.0,
+    "large": 182.0,
+    "large_whole": 182.0,
+    "cherry": 17.0,
+    "italian": 62.0,
+    "italian_tomato": 62.0,
+    "slice_thin": 15.0,
+    "small": 91.0,
+    "small_whole": 91.0,
+    "slice_thick": 27.0,
+    "cup": 149.0,
+    "cup_cherry_tomatoes": 149.0,
+    "wedge": 31.0,
+    "plum": 62.0,
+    "plum_tomato": 62.0,
+    "each": 123.0
+   },
+   "grams_per_ml": 0.6298
+  },
+  {
+   "names": [
+    "potato",
+    "potatoes"
+   ],
+   "usda_fdc_id": 170026,
+   "usda_description": "Potatoes, flesh and skin, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "potato": 170.0,
+    "cup": 150.0,
+    "cup_diced": 150.0,
+    "each": 170.0
+   },
+   "grams_per_ml": 0.634
+  },
+  {
+   "names": [
+    "sweet potato",
+    "sweet potatoes"
+   ],
+   "usda_fdc_id": 168482,
+   "usda_description": "Sweet potato, raw, unprepared (Includes foods for USDA's Food Distribution Program)",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 133.0,
+    "cup_cubes": 133.0,
+    "sweetpotato": 130.0,
+    "sweetpotato_long": 130.0,
+    "each": 130.0
+   },
+   "grams_per_ml": 0.5622
+  },
+  {
+   "names": [
+    "broccoli"
+   ],
+   "usda_fdc_id": 170379,
+   "usda_description": "Broccoli, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "bunch": 608.0,
+    "stalk": 151.0,
+    "spear": 31.0,
+    "cup": 91.0,
+    "cup_chopped": 91.0,
+    "each": 151.0
+   },
+   "grams_per_ml": 0.3846
+  },
+  {
+   "names": [
+    "spinach",
+    "baby spinach"
+   ],
+   "usda_fdc_id": 168462,
+   "usda_description": "Spinach, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "bunch": 340.0,
+    "leaf": 10.0,
+    "cup": 30.0
+   },
+   "grams_per_ml": 0.1268
+  },
+  {
+   "names": [
+    "cabbage"
+   ],
+   "usda_fdc_id": 169975,
+   "usda_description": "Cabbage, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "leaf": 33.0,
+    "head": 908.0,
+    "cup": 89.0,
+    "cup_chopped": 89.0,
+    "cup_shredded": 70.0,
+    "each": 908.0
+   },
+   "grams_per_ml": 0.3762
+  },
+  {
+   "names": [
+    "mushrooms"
+   ],
+   "usda_fdc_id": 169251,
+   "usda_description": "Mushrooms, white, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "small": 10.0,
+    "slice": 6.0,
+    "cup": 96.0,
+    "cup_whole": 96.0,
+    "medium": 18.0,
+    "large": 23.0,
+    "cup_pieces": 70.0,
+    "each": 18.0
+   },
+   "grams_per_ml": 0.4058
+  },
+  {
+   "names": [
+    "zucchini"
+   ],
+   "usda_fdc_id": 169291,
+   "usda_description": "Squash, summer, zucchini, includes skin, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "large": 323.0,
+    "medium": 196.0,
+    "slice": 9.9,
+    "small": 118.0,
+    "cup": 124.0,
+    "cup_chopped": 124.0,
+    "cup_sliced": 113.0,
+    "each": 196.0
+   },
+   "grams_per_ml": 0.5241
+  },
+  {
+   "names": [
+    "cilantro",
+    "fresh cilantro"
+   ],
+   "usda_fdc_id": 169997,
+   "usda_description": "Coriander (cilantro) leaves, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "sprig": 2.222,
+    "cup": 16.0
+   },
+   "grams_per_ml": 0.0676
+  },
+  {
+   "names": [
+    "parsley",
+    "fresh parsley"
+   ],
+   "usda_fdc_id": 170416,
+   "usda_description": "Parsley, fresh",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 60.0,
+    "cup_chopped": 60.0,
+    "tablespoon": 3.8,
+    "sprig": 1.0
+   },
+   "grams_per_ml": 0.2536
+  },
+  {
+   "names": [
+    "fresh ginger",
+    "ginger root"
+   ],
+   "usda_fdc_id": 169231,
+   "usda_description": "Ginger root, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "slice": 2.2,
+    "cup": 96.0,
+    "cup_slices": 96.0,
+    "teaspoon": 2.0
+   },
+   "grams_per_ml": 0.4058
+  },
+  {
+   "names": [
+    "lemon"
+   ],
+   "usda_fdc_id": 167746,
+   "usda_description": "Lemons, raw, without peel",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 212.0,
+    "cup_sections": 212.0,
+    "fruit": 84.0,
+    "each": 84.0
+   },
+   "grams_per_ml": 0.8961
+  },
+  {
+   "names": [
+    "lemon juice"
+   ],
+   "usda_fdc_id": 167747,
+   "usda_description": "Lemon juice, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "wedge": 5.9,
+    "wedge_yields": 5.9,
+    "lemon": 48.0,
+    "lemon_yields": 48.0,
+    "cup": 244.0,
+    "fluid_ounce": 30.5,
+    "each": 48.0
+   },
+   "grams_per_ml": 1.0313
+  },
+  {
+   "names": [
+    "lime"
+   ],
+   "usda_fdc_id": 168155,
+   "usda_description": "Limes, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "fruit": 67.0,
+    "each": 67.0
+   },
+   "grams_per_ml": null
+  },
+  {
+   "names": [
+    "lime juice"
+   ],
+   "usda_fdc_id": 168156,
+   "usda_description": "Lime juice, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 242.0,
+    "fluid_ounce": 30.8,
+    "lime": 44.0,
+    "lime_yields": 44.0,
+    "each": 44.0
+   },
+   "grams_per_ml": 1.0229
+  },
+  {
+   "names": [
+    "banana"
+   ],
+   "usda_fdc_id": 173944,
+   "usda_description": "Bananas, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "extra_large": 152.0,
+    "large": 136.0,
+    "cup": 150.0,
+    "cup_sliced": 150.0,
+    "small": 101.0,
+    "extra_small": 81.0,
+    "medium": 118.0,
+    "cup_mashed": 225.0,
+    "each": 118.0
+   },
+   "grams_per_ml": 0.634
+  },
+  {
+   "names": [
+    "apple"
+   ],
+   "usda_fdc_id": 171688,
+   "usda_description": "Apples, raw, with skin (Includes foods for USDA's Food Distribution Program)",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 109.0,
+    "cup_slices": 109.0,
+    "medium": 182.0,
+    "small": 149.0,
+    "extra_small": 101.0,
+    "large": 223.0,
+    "each": 182.0
+   },
+   "grams_per_ml": 0.4607
+  },
+  {
+   "names": [
+    "avocado"
+   ],
+   "usda_fdc_id": 171705,
+   "usda_description": "Avocados, raw, all commercial varieties",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 230.0,
+    "cup_pureed": 230.0,
+    "cup_cubes": 150.0,
+    "cup_sliced": 146.0
+   },
+   "grams_per_ml": 0.9722
+  },
+  {
+   "names": [
+    "frozen peas",
+    "peas",
+    "green peas"
+   ],
+   "usda_fdc_id": 170016,
+   "usda_description": "Peas, green, frozen, unprepared (Includes foods for USDA's Food Distribution Program)",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 134.0
+   },
+   "grams_per_ml": 0.5664
+  },
+  {
+   "names": [
+    "corn",
+    "sweet corn",
+    "frozen corn"
+   ],
+   "usda_fdc_id": 168398,
+   "usda_description": "Corn, sweet, yellow, frozen, kernels cut off cob, unprepared (Includes foods for USDA's Food Distribution Program)",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 136.0
+   },
+   "grams_per_ml": 0.5748
+  },
+  {
+   "names": [
+    "black beans"
+   ],
+   "usda_fdc_id": 175238,
+   "usda_description": "Beans, black, mature seeds, canned, low sodium",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 240.0
+   },
+   "grams_per_ml": 1.0144
+  },
+  {
+   "names": [
+    "chickpeas",
+    "garbanzo beans"
+   ],
+   "usda_fdc_id": 173801,
+   "usda_description": "Chickpeas (garbanzo beans, bengal gram), mature seeds, canned, drained, rinsed in tap water",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 152.0,
+    "cup_drained_rinsed": 152.0,
+    "can": 254.0,
+    "can_drained_rinsed": 254.0
+   },
+   "grams_per_ml": 0.6425
+  },
+  {
+   "names": [
+    "white beans",
+    "cannellini beans",
+    "great northern beans"
+   ],
+   "usda_fdc_id": 175204,
+   "usda_description": "Beans, white, mature seeds, canned",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 262.0
+   },
+   "grams_per_ml": 1.1074
+  },
+  {
+   "names": [
+    "egg",
+    "eggs"
+   ],
+   "usda_fdc_id": 171287,
+   "usda_description": "Egg, whole, raw, fresh",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 243.0,
+    "medium": 44.0,
+    "extra_large": 56.0,
+    "small": 38.0,
+    "jumbo": 63.0,
+    "large": 50.0,
+    "each": 50.0
+   },
+   "grams_per_ml": 1.0271
+  },
+  {
+   "names": [
+    "chicken thigh",
+    "chicken thighs"
+   ],
+   "usda_fdc_id": 173627,
+   "usda_description": "Chicken, broilers or fryers, dark meat, thigh, meat only, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "thigh": 149.0,
+    "thigh_skin": 149.0,
+    "each": 149.0
+   },
+   "grams_per_ml": null
+  },
+  {
+   "names": [
+    "chicken breast",
+    "chicken breasts"
+   ],
+   "usda_fdc_id": 171077,
+   "usda_description": "Chicken, broiler or fryers, breast, skinless, boneless, meat only, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "piece": 272.0,
+    "each": 272.0
+   },
+   "grams_per_ml": null
+  },
+  {
+   "names": [
+    "egg white",
+    "egg whites"
+   ],
+   "usda_fdc_id": 172183,
+   "usda_description": "Egg, white, raw, fresh",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "cup": 243.0,
+    "large": 33.0,
+    "each": 33.0
+   },
+   "grams_per_ml": 1.0271
+  },
+  {
+   "names": [
+    "egg yolk",
+    "egg yolks"
+   ],
+   "usda_fdc_id": 172184,
+   "usda_description": "Egg, yolk, raw, fresh",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "large": 17.0,
+    "cup": 243.0,
+    "each": 17.0
+   },
+   "grams_per_ml": 1.0271
+  }
+ ]
+}
