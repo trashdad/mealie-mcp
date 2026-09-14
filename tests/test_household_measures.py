@@ -121,7 +121,9 @@ def test_reference_table_is_usda_sourced_and_sane():
         ("ginger", "", "ginger"),
         ("red bell pepper", "", "red bell pepper"),
         ("pepper", "", "pepper"),
-        ("chicken breasts", "", None),
+        ("chicken breasts", "", "chicken breasts"),
+        ("jalapeños", "", "jalapenos"),
+        ("red pepper", "", "red pepper"),
         ("dragonfruit", "", None),
     ],
 )

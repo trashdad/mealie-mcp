@@ -1257,7 +1257,11 @@
    "names": [
     "bell pepper",
     "red bell pepper",
-    "green bell pepper"
+    "green bell pepper",
+    "red pepper",
+    "green pepper",
+    "yellow pepper",
+    "sweet pepper"
    ],
    "usda_fdc_id": 170108,
    "usda_description": "Peppers, sweet, red, raw",
@@ -1691,6 +1695,35 @@
     "each": 50.0
    },
    "grams_per_ml": 1.0271
+  },
+  {
+   "names": [
+    "chicken thigh",
+    "chicken thighs"
+   ],
+   "usda_fdc_id": 173627,
+   "usda_description": "Chicken, broilers or fryers, dark meat, thigh, meat only, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "thigh": 149.0,
+    "thigh_skin": 149.0,
+    "each": 149.0
+   },
+   "grams_per_ml": null
+  },
+  {
+   "names": [
+    "chicken breast",
+    "chicken breasts"
+   ],
+   "usda_fdc_id": 171077,
+   "usda_description": "Chicken, broiler or fryers, breast, skinless, boneless, meat only, raw",
+   "usda_data_type": "SR Legacy",
+   "portion_grams": {
+    "piece": 272.0,
+    "each": 272.0
+   },
+   "grams_per_ml": null
   },
   {
    "names": [

@@ -119,7 +119,7 @@ REFERENCE: list[tuple[list[str], str, str]] = [
     (["garlic"], "Garlic, raw", "SR Legacy"),
     (["carrot", "carrots"], "Carrots, raw", "SR Legacy"),
     (["celery"], "Celery, raw", "SR Legacy"),
-    (["bell pepper", "red bell pepper", "green bell pepper"], "Peppers, sweet, red, raw", "SR Legacy"),
+    (["bell pepper", "red bell pepper", "green bell pepper", "red pepper", "green pepper", "yellow pepper", "sweet pepper"], "Peppers, sweet, red, raw", "SR Legacy"),
     (["jalapeno", "jalapeno pepper", "jalapenos"], "Peppers, jalapeno, raw", "SR Legacy"),
     (["tomato", "tomatoes"], "Tomatoes, red, ripe, raw, year round average", "SR Legacy"),
     (["potato", "potatoes"], "Potatoes, flesh and skin, raw", "SR Legacy"),
@@ -145,6 +145,9 @@ REFERENCE: list[tuple[list[str], str, str]] = [
     (["chickpeas", "garbanzo beans"], "Chickpeas (garbanzo beans, bengal gram), mature seeds, canned, drained, rinsed in tap water", "SR Legacy"),
     (["white beans", "cannellini beans", "great northern beans"], "Beans, white, mature seeds, canned", "SR Legacy"),
     (["egg", "eggs"], "Egg, whole, raw, fresh", "SR Legacy"),
+    # meat pieces ("2 chicken thighs")
+    (["chicken thigh", "chicken thighs"], "Chicken, broilers or fryers, dark meat, thigh, meat only, raw", "SR Legacy"),
+    (["chicken breast", "chicken breasts"], "Chicken, broiler or fryers, breast, skinless, boneless, meat only, raw", "SR Legacy"),
     (["egg white", "egg whites"], "Egg, white, raw, fresh", "SR Legacy"),
     (["egg yolk", "egg yolks"], "Egg, yolk, raw, fresh", "SR Legacy"),
 ]

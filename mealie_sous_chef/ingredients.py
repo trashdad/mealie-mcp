@@ -18,6 +18,7 @@ import asyncio
 import copy
 import math
 import re
+import unicodedata
 import uuid
 from dataclasses import dataclass, field
 from typing import Any
@@ -71,10 +72,15 @@ def _singular(word: str) -> str:
     return word
 
 
+def fold(text: str | None) -> str:
+    """Lower-case ASCII: 'Jalapeños' -> 'jalapenos', 'crème' -> 'creme'."""
+    return unicodedata.normalize("NFKD", text or "").encode("ascii", "ignore").decode().lower()
+
+
 def words(text: str | None) -> set[str]:
-    """Comparable content words: lower-case letters only (numbers, fractions and
-    punctuation dropped), singularised, stopwords removed."""
-    return {_singular(w) for w in re.findall(r"[a-z]+", (text or "").lower())} - _STOPWORDS
+    """Comparable content words: lower-case letters only (accents folded; numbers,
+    fractions and punctuation dropped), singularised, stopwords removed."""
+    return {_singular(w) for w in re.findall(r"[a-z]+", fold(text))} - _STOPWORDS
 
 
 def _names(obj: Any) -> list[str]:

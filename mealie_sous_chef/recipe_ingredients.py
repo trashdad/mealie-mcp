@@ -24,6 +24,7 @@ from .ingredients import (
     _singular,
     _STOPWORDS,
     assess_parse,
+    fold,
     build_parsed_ingredient,
     fetch_by_ids,
     normalize_text,
@@ -133,7 +134,7 @@ def _summary(rows: list[dict]) -> dict[str, int]:
 
 
 def _ordered_words(text: str) -> list[str]:
-    return [w for w in (_singular(t) for t in re.findall(r"[a-z]+", text.lower())) if w not in _STOPWORDS]
+    return [w for w in (_singular(t) for t in re.findall(r"[a-z]+", fold(text))) if w not in _STOPWORDS]
 
 
 def _search_terms(name: str) -> list[str]:

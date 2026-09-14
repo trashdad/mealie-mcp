@@ -22,7 +22,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Any
 
-from .ingredients import _singular, words
+from .ingredients import _singular, fold, words
 
 CUP_ML, TABLESPOON_ML, TEASPOON_ML, FLUID_OUNCE_ML = 236.5882365, 14.78676478125, 4.92892159375, 29.5735295625
 _VOLUME_KEYS = {"cup": CUP_ML, "tablespoon": TABLESPOON_ML, "teaspoon": TEASPOON_ML, "fluid_ounce": FLUID_OUNCE_ML}
@@ -132,7 +132,7 @@ def whole_item_key(grams: dict[str, float], food_description: str | None) -> str
     whole = [k for k in _WHOLE_ITEM_UNITS if k in grams]
     if whole:
         return whole[0]
-    ordered = [_singular(w) for w in re.findall(r"[a-z]+", (food_description or "").lower())]
+    ordered = [_singular(w) for w in re.findall(r"[a-z]+", fold(food_description))]
     joined = "".join(ordered)
     for k in grams:
         if "_" not in k and len(k) > 2 and (k in ordered or (len(k) > 4 and k in joined)):
@@ -161,7 +161,7 @@ def portion_for_unit(portions: dict[str, float], unit_names: list[str], note: st
 
 def portion_for_piece(portions: dict[str, float], note: str = "") -> tuple[str, float] | None:
     """Weight of one whole item: a size in the note ("large") if the table has it, else 'each'."""
-    note_text = "_".join(re.findall(r"[a-z]+", (note or "").lower()))
+    note_text = "_".join(re.findall(r"[a-z]+", fold(note)))
     for size in SIZE_WORDS:
         if re.search(rf"(^|_){size}(_|$)", note_text) and size in portions:
             return size, portions[size]
